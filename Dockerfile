@@ -2,16 +2,12 @@
 FROM --platform=$BUILDPLATFORM node:22-alpine AS frontend-builder
 WORKDIR /app/frontend
 
-RUN apk add --no-cache librsvg
-
 COPY frontend/package*.json ./
 RUN npm ci
 
 COPY frontend/ .
 
-RUN mkdir -p public/icons \
-    && rsvg-convert -w 192 -h 192 public/logo.svg -o public/icons/icon-192.png \
-    && rsvg-convert -w 512 -h 512 public/logo.svg -o public/icons/icon-512.png
+RUN node generate-icons.mjs
 
 RUN npm run build
 
