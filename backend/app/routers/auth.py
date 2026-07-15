@@ -1,0 +1,91 @@
+from fastapi import APIRouter, Depends, HTTPException, Response, status
+from sqlalchemy.orm import Session
+from ..database import get_db
+from ..models import User, SystemSetting
+from ..schemas import UserRegister, UserLogin, UserOut, ChangePassword
+from ..auth import hash_password, verify_password, create_access_token
+from ..dependencies import get_current_user
+from ..config import settings
+
+router = APIRouter(prefix="/auth", tags=["auth"])
+
+COOKIE_NAME = "deckVault_token"
+COOKIE_MAX_AGE = settings.access_token_expire_minutes * 60
+
+
+@router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
+def register(data: UserRegister, response: Response, db: Session = Depends(get_db)):
+    reg_setting = db.query(SystemSetting).filter(SystemSetting.key == "registration_enabled").first()
+    if reg_setting and reg_setting.value == "false":
+        raise HTTPException(status_code=403, detail="Registration is disabled")
+
+    if db.query(User).filter(User.username == data.username).first():
+        raise HTTPException(status_code=400, detail="Username already taken")
+    if db.query(User).filter(User.email == data.email).first():
+        raise HTTPException(status_code=400, detail="Email already registered")
+
+    is_first_user = db.query(User).count() == 0
+    user = User(
+        username=data.username,
+        email=data.email,
+        hashed_password=hash_password(data.password),
+        is_admin=is_first_user,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    if is_first_user:
+        db.add(SystemSetting(key="registration_enabled", value="true"))
+        db.commit()
+
+    token = create_access_token(user.id)
+    response.set_cookie(
+        key=COOKIE_NAME,
+        value=token,
+        httponly=True,
+        max_age=COOKIE_MAX_AGE,
+        samesite="lax",
+    )
+    return user
+
+
+@router.post("/login", response_model=UserOut)
+def login(data: UserLogin, response: Response, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username == data.username).first()
+    if not user or not verify_password(data.password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    token = create_access_token(user.id)
+    response.set_cookie(
+        key=COOKIE_NAME,
+        value=token,
+        httponly=True,
+        max_age=COOKIE_MAX_AGE,
+        samesite="lax",
+    )
+    return user
+
+
+@router.post("/logout")
+def logout(response: Response):
+    response.delete_cookie(key=COOKIE_NAME)
+    return {"ok": True}
+
+
+@router.get("/me", response_model=UserOut)
+def me(current_user: User = Depends(get_current_user)):
+    return current_user
+
+
+@router.post("/change-password")
+def change_password(
+    data: ChangePassword,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not verify_password(data.current_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    current_user.hashed_password = hash_password(data.new_password)
+    db.commit()
+    return {"ok": True}

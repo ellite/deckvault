@@ -1,0 +1,27 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import GamePage from "../../components/GamePage.svelte";
+import { apiJson } from "../../lib/api";
+
+const { id } = Astro.params;
+const cookies = Astro.request.headers.get("cookie") ?? "";
+
+let game: any = null;
+let storage: any = null;
+let user: any = null;
+
+try {
+  [game, user] = await Promise.all([
+    apiJson<any>(`/games/${id}`, { cookies }),
+    apiJson<any>("/auth/me", { cookies }),
+  ]);
+  storage = await apiJson<any>(`/storage/${game.storage_medium_id}`, { cookies });
+} catch (e: any) {
+  if (e.status === 401) return Astro.redirect("/login");
+  return Astro.redirect("/storage");
+}
+---
+
+<Layout title={game?.title ?? "Game"} showNav={true} user={user} activePage="dashboard">
+  <GamePage client:load game={game} storage={storage} />
+</Layout>

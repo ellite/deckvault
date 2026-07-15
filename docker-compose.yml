@@ -1,0 +1,13 @@
+services:
+  deckvault:
+    image: ghcr.io/ellite/deckvault:latest
+    container_name: deckvault
+    restart: unless-stopped
+    ports:
+      - "4367:4367"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - SECRET_KEY=change-me-generate-a-random-string
+    volumes:
+      - ./data:/app/backend/data

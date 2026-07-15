@@ -1,0 +1,30 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Dashboard from "../components/Dashboard.svelte";
+import { apiJson } from "../lib/api";
+
+const cookies = Astro.request.headers.get("cookie") ?? "";
+
+let storageList: any[] = [];
+let user: any = null;
+
+try {
+  [storageList, user] = await Promise.all([
+    apiJson<any[]>("/storage", { cookies }),
+    apiJson<any>("/auth/me", { cookies }),
+  ]);
+} catch (e: any) {
+  if (e.status === 401) return Astro.redirect("/login");
+}
+---
+
+<Layout title="Storage" showNav={true} user={user} activePage="dashboard">
+  <Dashboard client:load initialStorage={storageList} />
+</Layout>
+
+<script>
+  // Reload when browser restores page from bfcache to ensure fresh data
+  window.addEventListener("pageshow", (e) => {
+    if (e.persisted) window.location.reload();
+  });
+</script>

@@ -1,0 +1,41 @@
+{
+  "name": "DeckVault",
+  "short_name": "DeckVault",
+  "description": "Track your Steam Deck games across all storage mediums",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0d0d14",
+  "theme_color": "#0d0d14",
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "categories": ["games", "utilities"],
+  "shortcuts": [
+    {
+      "name": "Storage",
+      "url": "/storage",
+      "description": "View your storage devices"
+    },
+    {
+      "name": "Library",
+      "url": "/library",
+      "description": "Browse all your games"
+    }
+  ]
+}

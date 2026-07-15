@@ -1,0 +1,53 @@
+---
+import NavBar from "../components/NavBar.astro";
+
+interface Props {
+  title?: string;
+  fullPage?: boolean;
+  showNav?: boolean;
+  user?: any;
+  activePage?: "dashboard" | "library" | "settings" | "about";
+}
+const { title = "DeckVault", fullPage = false, showNav = false, user, activePage } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f0f9f8" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0a1628" media="(prefers-color-scheme: dark)" />
+    <meta name="description" content="Track your Steam Deck games across all storage mediums" />
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <title>{title} | DeckVault</title>
+
+    <script is:inline>
+      const saved = localStorage.getItem("dv-theme");
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      if (saved === "dark" || (!saved && prefersDark)) {
+        document.documentElement.classList.add("dark");
+      }
+    </script>
+  </head>
+
+  <body class={[
+    fullPage ? "min-h-screen flex items-center justify-center" : "min-h-screen",
+    showNav ? "pt-14 pb-16 md:pb-0" : "",
+  ].join(" ")}>
+    {showNav && <NavBar user={user} activePage={activePage} />}
+    <slot />
+
+    <script>
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("/sw.js");
+      }
+    </script>
+  </body>
+</html>
+
+<style is:global>
+  @import "../styles/global.css";
+</style>

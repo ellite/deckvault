@@ -1,0 +1,25 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import StoragePage from "../../components/StoragePage.svelte";
+import { apiJson } from "../../lib/api";
+
+const { id } = Astro.params;
+const cookies = Astro.request.headers.get("cookie") ?? "";
+
+let storage: any = null;
+let user: any = null;
+
+try {
+  [storage, user] = await Promise.all([
+    apiJson<any>(`/storage/${id}`, { cookies }),
+    apiJson<any>("/auth/me", { cookies }),
+  ]);
+} catch (e: any) {
+  if (e.status === 401) return Astro.redirect("/login");
+  return Astro.redirect("/storage");
+}
+---
+
+<Layout title={storage?.label ?? "Storage"} showNav={true} user={user} activePage="dashboard">
+  <StoragePage client:load storage={storage} />
+</Layout>

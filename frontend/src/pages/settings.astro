@@ -1,0 +1,237 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { apiJson } from "../lib/api";
+
+const cookies = Astro.request.headers.get("cookie") ?? "";
+
+let user: any = null;
+let settings: any = null;
+let users: any[] = [];
+
+try {
+  [user, settings] = await Promise.all([
+    apiJson<any>("/auth/me", { cookies }),
+    apiJson<any>("/settings", { cookies }),
+  ]);
+  if (user.is_admin) {
+    users = await apiJson<any[]>("/settings/users", { cookies });
+  }
+} catch (e: any) {
+  if (e.status === 401) return Astro.redirect("/login");
+}
+---
+
+<Layout title="Settings" showNav={true} user={user} activePage="settings">
+  <main class="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
+      <h1 class="text-2xl font-bold">Settings</h1>
+
+      <!-- Account -->
+      <section class="card p-6 space-y-5">
+        <h2 class="font-bold text-lg">Account</h2>
+        <div class="flex items-center gap-3 pb-4 border-b border-border dark:border-border-dark">
+          <div class="w-12 h-12 rounded-full bg-primary/20 dark:bg-primary/30 flex items-center justify-center">
+            <span class="text-lg font-bold text-primary dark:text-primary-light">
+              {user?.username?.[0]?.toUpperCase()}
+            </span>
+          </div>
+          <div>
+            <p class="font-semibold">{user?.username}</p>
+            <p class="text-sm text-slate-500 dark:text-slate-400">{user?.email}</p>
+            {user?.is_admin && (
+              <span class="inline-block mt-1 text-xs font-bold px-2 py-0.5 rounded-full bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-light">Admin</span>
+            )}
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          <h3 class="font-semibold text-sm">Change Password</h3>
+          <div id="pw-success" class="hidden bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-sm px-4 py-3 rounded-xl">Password updated!</div>
+          <div id="pw-error" class="hidden bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 text-sm px-4 py-3 rounded-xl"></div>
+          <div>
+            <label class="label" for="cur-pw">Current Password</label>
+            <input id="cur-pw" type="password" class="input" placeholder="••••••••" />
+          </div>
+          <div>
+            <label class="label" for="new-pw">New Password</label>
+            <input id="new-pw" type="password" class="input" placeholder="••••••••" />
+          </div>
+          <button id="change-pw-btn" class="btn-primary">Update Password</button>
+        </div>
+      </section>
+
+      <!-- IGDB -->
+      <section class="card p-6 space-y-5">
+        <div>
+          <h2 class="font-bold text-lg">IGDB Integration</h2>
+          <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Used for game search and cover art. Get credentials at
+            <a href="https://dev.twitch.tv/console" target="_blank" rel="noopener" class="text-primary hover:underline">dev.twitch.tv</a>
+            - create an app and copy the Client ID + Secret.
+          </p>
+        </div>
+        <div id="igdb-success" class="hidden bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-sm px-4 py-3 rounded-xl">Credentials saved!</div>
+        <div id="igdb-error" class="hidden bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 text-sm px-4 py-3 rounded-xl"></div>
+        <div>
+          <label class="label" for="igdb-client-id">Client ID</label>
+          <input id="igdb-client-id" class="input" type="text" placeholder="xxxxxxxxxxxxxxxxxxxxxxxx" autocomplete="off" />
+        </div>
+        <div>
+          <label class="label" for="igdb-client-secret">Client Secret</label>
+          <input id="igdb-client-secret" class="input" type="password" placeholder="Leave blank to keep existing secret" autocomplete="off" />
+        </div>
+        <button id="igdb-save-btn" class="btn-primary">Save Credentials</button>
+      </section>
+
+      <!-- Admin -->
+      {user?.is_admin && (
+        <section class="card p-6 space-y-5">
+          <h2 class="font-bold text-lg">Admin</h2>
+
+          <!-- Registration toggle -->
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="font-semibold text-sm">Allow Registration</p>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Let new users create accounts</p>
+            </div>
+            <button
+              id="reg-toggle"
+              class={`relative w-11 h-6 rounded-full transition-colors duration-200 ${settings?.registration_enabled ? "bg-primary" : "bg-slate-300 dark:bg-slate-600"}`}
+              data-enabled={settings?.registration_enabled}
+              aria-label="Toggle registration"
+            >
+              <span class={`absolute left-0 top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${settings?.registration_enabled ? "translate-x-5" : "translate-x-0.5"}`}></span>
+            </button>
+          </div>
+
+          <!-- User list -->
+          {users.length > 0 && (
+            <div>
+              <h3 class="font-semibold text-sm mb-3">Users</h3>
+              <div class="space-y-2">
+                {users.map((u: any) => (
+                  <div class="flex items-center justify-between py-2 px-3 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5">
+                    <div class="flex items-center gap-2.5">
+                      <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                        <span class="text-sm font-bold text-primary">{u.username[0].toUpperCase()}</span>
+                      </div>
+                      <div>
+                        <p class="text-sm font-semibold">{u.username}</p>
+                        <p class="text-xs text-slate-400">{u.email}</p>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      {u.is_admin && (
+                        <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-light">Admin</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+
+      <!-- Danger -->
+      <section class="card p-6">
+        <h2 class="font-bold text-lg mb-4">Session</h2>
+        <button id="logout-btn" class="btn-danger">Sign Out</button>
+      </section>
+  </main>
+
+  <script>
+    // Change password
+    document.getElementById("change-pw-btn")?.addEventListener("click", async () => {
+      const btn = document.getElementById("change-pw-btn") as HTMLButtonElement;
+      const cur = (document.getElementById("cur-pw") as HTMLInputElement).value;
+      const nw = (document.getElementById("new-pw") as HTMLInputElement).value;
+      const successEl = document.getElementById("pw-success")!;
+      const errEl = document.getElementById("pw-error")!;
+      successEl.classList.add("hidden");
+      errEl.classList.add("hidden");
+
+      if (!cur || !nw) return;
+      btn.disabled = true;
+      try {
+        const res = await fetch("/api/auth/change-password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ current_password: cur, new_password: nw }),
+        });
+        if (!res.ok) { const d = await res.json(); throw new Error(d.detail); }
+        successEl.classList.remove("hidden");
+        (document.getElementById("cur-pw") as HTMLInputElement).value = "";
+        (document.getElementById("new-pw") as HTMLInputElement).value = "";
+      } catch (e: any) {
+        errEl.textContent = e.message;
+        errEl.classList.remove("hidden");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    // Load existing IGDB client_id
+    fetch("/api/settings/igdb")
+      .then((r) => r.json())
+      .then((d) => {
+        const idInput = document.getElementById("igdb-client-id") as HTMLInputElement;
+        if (d.client_id) idInput.value = d.client_id;
+        const secretInput = document.getElementById("igdb-client-secret") as HTMLInputElement;
+        if (d.has_secret) secretInput.placeholder = "Secret saved - enter new value to replace";
+      })
+      .catch(() => {});
+
+    // Save IGDB credentials
+    document.getElementById("igdb-save-btn")?.addEventListener("click", async () => {
+      const btn = document.getElementById("igdb-save-btn") as HTMLButtonElement;
+      const clientId = (document.getElementById("igdb-client-id") as HTMLInputElement).value.trim();
+      const clientSecret = (document.getElementById("igdb-client-secret") as HTMLInputElement).value.trim();
+      const successEl = document.getElementById("igdb-success")!;
+      const errEl = document.getElementById("igdb-error")!;
+      successEl.classList.add("hidden");
+      errEl.classList.add("hidden");
+
+      if (!clientId) { errEl.textContent = "Client ID is required"; errEl.classList.remove("hidden"); return; }
+      if (!clientSecret) { errEl.textContent = "Client Secret is required (enter the secret even if already saved)"; errEl.classList.remove("hidden"); return; }
+
+      btn.disabled = true;
+      try {
+        const res = await fetch("/api/settings/igdb", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ client_id: clientId, client_secret: clientSecret }),
+        });
+        if (!res.ok) { const d = await res.json(); throw new Error(d.detail ?? "Failed"); }
+        successEl.classList.remove("hidden");
+        (document.getElementById("igdb-client-secret") as HTMLInputElement).value = "";
+        (document.getElementById("igdb-client-secret") as HTMLInputElement).placeholder = "Secret saved - enter new value to replace";
+      } catch (e: any) {
+        errEl.textContent = e.message;
+        errEl.classList.remove("hidden");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    // Registration toggle
+    const regToggle = document.getElementById("reg-toggle");
+    regToggle?.addEventListener("click", async () => {
+      const current = regToggle.dataset.enabled === "true";
+      const next = !current;
+      try {
+        const res = await fetch(`/api/settings/registration?enabled=${next}`, { method: "PUT" });
+        if (!res.ok) throw new Error("Failed");
+        regToggle.dataset.enabled = String(next);
+        regToggle.className = `relative w-11 h-6 rounded-full transition-colors duration-200 ${next ? "bg-primary" : "bg-slate-300 dark:bg-slate-600"}`;
+        const thumb = regToggle.querySelector("span")!;
+        thumb.className = `absolute left-0 top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${next ? "translate-x-5" : "translate-x-0.5"}`;
+      } catch {}
+    });
+
+    // Logout
+    document.getElementById("logout-btn")?.addEventListener("click", async () => {
+      await fetch("/api/auth/logout", { method: "POST" });
+      window.location.href = "/login";
+    });
+  </script>
+</Layout>

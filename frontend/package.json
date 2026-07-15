@@ -1,0 +1,19 @@
+{
+  "name": "deckvault-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev --port 4367",
+    "build": "astro build",
+    "preview": "astro preview --port 4367",
+    "start": "node dist/server/entry.mjs"
+  },
+  "dependencies": {
+    "@astrojs/node": "^9.0.0",
+    "@astrojs/svelte": "^7.0.0",
+    "@astrojs/tailwind": "^5.0.0",
+    "astro": "^5.0.0",
+    "svelte": "^5.0.0",
+    "tailwindcss": "^3.4.0"
+  }
+}

@@ -1,0 +1,23 @@
+---
+import Layout from "../layouts/Layout.astro";
+import LibraryPage from "../components/LibraryPage.svelte";
+import { apiJson } from "../lib/api";
+
+const cookies = Astro.request.headers.get("cookie") ?? "";
+
+let entries: any[] = [];
+let user: any = null;
+
+try {
+  [entries, user] = await Promise.all([
+    apiJson<any[]>("/games/library", { cookies }),
+    apiJson<any>("/auth/me", { cookies }),
+  ]);
+} catch (e: any) {
+  if (e.status === 401) return Astro.redirect("/login");
+}
+---
+
+<Layout title="Library" showNav={true} user={user} activePage="library">
+  <LibraryPage client:load entries={entries} />
+</Layout>

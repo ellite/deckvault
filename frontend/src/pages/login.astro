@@ -1,0 +1,84 @@
+---
+import Layout from "../layouts/Layout.astro";
+// Already logged in → go to dashboard
+if (Astro.cookies.get("deckVault_token")?.value) {
+  return Astro.redirect("/storage");
+}
+---
+
+<Layout title="Login" fullPage>
+  <div class="w-full max-w-sm px-4">
+    <div class="text-center mb-8">
+      <img src="/logo.svg" alt="DeckVault" class="w-16 h-16 mx-auto mb-4" />
+      <h1 class="text-2xl font-bold">Welcome back</h1>
+      <p class="text-slate-500 dark:text-slate-400 mt-1 text-sm">Sign in to DeckVault</p>
+    </div>
+
+    <div class="card p-6 space-y-4">
+      <div id="error-msg" class="hidden bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 text-sm px-4 py-3 rounded-xl"></div>
+
+      <div>
+        <label class="label" for="username">Username</label>
+        <input id="username" class="input" type="text" autocomplete="username" placeholder="your_username" />
+      </div>
+      <div>
+        <label class="label" for="password">Password</label>
+        <input id="password" class="input" type="password" autocomplete="current-password" placeholder="••••••••" />
+      </div>
+      <button id="login-btn" class="btn-primary w-full mt-2">Sign In</button>
+    </div>
+
+    <p class="text-center text-sm text-slate-500 dark:text-slate-400 mt-4" id="register-link">
+      No account? <a href="/register" class="text-primary dark:text-primary-light font-semibold hover:underline">Create one</a>
+    </p>
+  </div>
+
+  <script>
+    const btn = document.getElementById("login-btn") as HTMLButtonElement;
+    const errEl = document.getElementById("error-msg")!;
+
+    async function submit() {
+      const username = (document.getElementById("username") as HTMLInputElement).value.trim();
+      const password = (document.getElementById("password") as HTMLInputElement).value;
+      if (!username || !password) return;
+
+      btn.disabled = true;
+      btn.textContent = "Signing in…";
+      errEl.classList.add("hidden");
+
+      try {
+        const res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password }),
+        });
+        if (!res.ok) {
+          const text = await res.text();
+          let detail = "Login failed";
+          try { detail = JSON.parse(text).detail ?? detail; } catch {}
+          throw new Error(detail);
+        }
+        window.location.href = "/storage";
+      } catch (e: any) {
+        errEl.textContent = e.message;
+        errEl.classList.remove("hidden");
+        btn.disabled = false;
+        btn.textContent = "Sign In";
+      }
+    }
+
+    btn.addEventListener("click", submit);
+    ["username", "password"].forEach(id => {
+      document.getElementById(id)?.addEventListener("keydown", (e) => {
+        if ((e as KeyboardEvent).key === "Enter") submit();
+      });
+    });
+
+    // Check if registration is enabled (hide link if not)
+    fetch("/api/settings").then(r => r.json()).then(d => {
+      if (!d.registration_enabled) {
+        document.getElementById("register-link")!.style.display = "none";
+      }
+    }).catch(() => {});
+  </script>
+</Layout>

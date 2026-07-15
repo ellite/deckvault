@@ -1,0 +1,91 @@
+---
+import Layout from "../layouts/Layout.astro";
+if (Astro.cookies.get("deckVault_token")?.value) {
+  return Astro.redirect("/storage");
+}
+---
+
+<Layout title="Register" fullPage>
+  <div class="w-full max-w-sm px-4">
+    <div class="text-center mb-8">
+      <img src="/logo.svg" alt="DeckVault" class="w-16 h-16 mx-auto mb-4" />
+      <h1 class="text-2xl font-bold">Create account</h1>
+      <p class="text-slate-500 dark:text-slate-400 mt-1 text-sm">Join DeckVault</p>
+    </div>
+
+    <div class="card p-6 space-y-4">
+      <div id="error-msg" class="hidden bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 text-sm px-4 py-3 rounded-xl"></div>
+
+      <div>
+        <label class="label" for="username">Username</label>
+        <input id="username" class="input" type="text" autocomplete="username" placeholder="your_username" />
+      </div>
+      <div>
+        <label class="label" for="email">Email</label>
+        <input id="email" class="input" type="email" autocomplete="email" placeholder="you@example.com" />
+      </div>
+      <div>
+        <label class="label" for="password">Password</label>
+        <input id="password" class="input" type="password" autocomplete="new-password" placeholder="••••••••" />
+      </div>
+      <div>
+        <label class="label" for="confirm-password">Confirm Password</label>
+        <input id="confirm-password" class="input" type="password" autocomplete="new-password" placeholder="••••••••" />
+      </div>
+      <button id="register-btn" class="btn-primary w-full mt-2">Create Account</button>
+    </div>
+
+    <p class="text-center text-sm text-slate-500 dark:text-slate-400 mt-4">
+      Already have an account? <a href="/login" class="text-primary dark:text-primary-light font-semibold hover:underline">Sign in</a>
+    </p>
+  </div>
+
+  <script>
+    const btn = document.getElementById("register-btn") as HTMLButtonElement;
+    const errEl = document.getElementById("error-msg")!;
+
+    async function submit() {
+      const username = (document.getElementById("username") as HTMLInputElement).value.trim();
+      const email = (document.getElementById("email") as HTMLInputElement).value.trim();
+      const password = (document.getElementById("password") as HTMLInputElement).value;
+      const confirmPassword = (document.getElementById("confirm-password") as HTMLInputElement).value;
+      if (!username || !email || !password || !confirmPassword) return;
+      if (password !== confirmPassword) {
+        errEl.textContent = "Passwords do not match";
+        errEl.classList.remove("hidden");
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = "Creating…";
+      errEl.classList.add("hidden");
+
+      try {
+        const res = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, email, password }),
+        });
+        if (!res.ok) {
+          const text = await res.text();
+          let detail = "Registration failed";
+          try { detail = JSON.parse(text).detail ?? detail; } catch {}
+          throw new Error(detail);
+        }
+        window.location.href = "/storage";
+      } catch (e: any) {
+        errEl.textContent = e.message;
+        errEl.classList.remove("hidden");
+        btn.disabled = false;
+        btn.textContent = "Create Account";
+      }
+    }
+
+    btn.addEventListener("click", submit);
+    ["username", "email", "password", "confirm-password"].forEach(id => {
+      document.getElementById(id)?.addEventListener("keydown", (e) => {
+        if ((e as KeyboardEvent).key === "Enter") submit();
+      });
+    });
+  </script>
+</Layout>
