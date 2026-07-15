@@ -47,6 +47,17 @@ DeckVault tracks which games are installed across your **internal storage, SD ca
 
 <img src="screenshots/deckvault.png" alt="DeckVault" width="800" />
 
+<details>
+<summary>See more screenshots</summary>
+
+**Library**
+<img src="screenshots/library.png" alt="Library" width="800" />
+
+**Storage**
+<img src="screenshots/storage.png" alt="Storage" width="800" />
+
+</details>
+
 ## Getting Started
 
 ### Prerequisites
