@@ -12,6 +12,7 @@ data/
 
 # AI agents
 .claude/
+memory/
 .cursor/
 .aider*
 .copilot/

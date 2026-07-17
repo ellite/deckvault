@@ -22,5 +22,7 @@
   btn?.addEventListener("click", () => {
     const isDark = document.documentElement.classList.toggle("dark");
     localStorage.setItem("dv-theme", isDark ? "dark" : "light");
+    const meta = document.querySelector('meta[name="theme-color"][media]');
+    if (meta) meta.setAttribute("content", isDark ? "#0a1628" : "#f0f9f8");
   });
 </script>
