@@ -8,5 +8,5 @@ export default defineConfig({
   adapter: node({ mode: "standalone" }),
   integrations: [svelte(), tailwind({ applyBaseStyles: false })],
   server: { port: 4367, host: "0.0.0.0" },
-  security: { checkOrigin: true },
+  security: { checkOrigin: false },
 });
