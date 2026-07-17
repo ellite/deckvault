@@ -23,6 +23,7 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     storage_mediums = relationship("StorageMedium", back_populates="owner", cascade="all, delete-orphan")
+    sessions = relationship("UserSession", back_populates="user", cascade="all, delete-orphan")
 
 
 class StorageMedium(Base):
@@ -61,6 +62,16 @@ class Game(Base):
     added_at = Column(DateTime(timezone=True), server_default=func.now())
 
     storage_medium = relationship("StorageMedium", back_populates="games")
+
+
+class UserSession(Base):
+    __tablename__ = "sessions"
+
+    jti = Column(String, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+
+    user = relationship("User", back_populates="sessions")
 
 
 class SystemSetting(Base):

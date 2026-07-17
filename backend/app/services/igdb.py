@@ -38,12 +38,14 @@ async def _get_token(client_id: str, client_secret: str) -> str | None:
 
 
 async def search_games(query: str, db: Session) -> list[dict]:
+    if not query or len(query) > 200:
+        return []
     creds = _get_credentials(db)
     if not creds:
         return []
     client_id, client_secret = creds
 
-    escaped = query.replace('"', '\\"')
+    escaped = query.replace("\\", "\\\\").replace('"', '\\"')
     fields = 'fields id,name,summary,first_release_date,rating,genres.name,cover.image_id;'
     body_search = f'search "{escaped}"; {fields} limit 20;'
     body_name   = f'{fields} where name ~ *"{escaped}"*; limit 20;'

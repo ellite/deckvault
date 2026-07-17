@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
 from datetime import datetime
 from .models import StorageType
@@ -6,9 +6,9 @@ from .models import StorageType
 
 # Auth
 class UserRegister(BaseModel):
-    username: str
+    username: str = Field(min_length=1, max_length=64)
     email: EmailStr
-    password: str
+    password: str = Field(min_length=8, max_length=128)
 
 
 class UserLogin(BaseModel):
@@ -28,7 +28,7 @@ class UserOut(BaseModel):
 
 class ChangePassword(BaseModel):
     current_password: str
-    new_password: str
+    new_password: str = Field(min_length=8, max_length=128)
 
 
 class TokenData(BaseModel):

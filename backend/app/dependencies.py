@@ -1,8 +1,9 @@
+from datetime import datetime, timezone
 from fastapi import Depends, HTTPException, status, Cookie
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import Optional
 from .database import get_db
-from .models import User
+from .models import User, UserSession
 from .auth import decode_token
 
 
@@ -16,13 +17,23 @@ def get_current_user(
     )
     if not deckVault_token:
         raise credentials_exception
-    user_id = decode_token(deckVault_token)
-    if user_id is None:
+    decoded = decode_token(deckVault_token)
+    if decoded is None:
         raise credentials_exception
-    user = db.query(User).filter(User.id == user_id).first()
-    if user is None:
+    user_id, jti = decoded
+    session = (
+        db.query(UserSession)
+        .options(joinedload(UserSession.user))
+        .filter(
+            UserSession.jti == jti,
+            UserSession.user_id == user_id,
+            UserSession.expires_at > datetime.now(timezone.utc),
+        )
+        .first()
+    )
+    if session is None:
         raise credentials_exception
-    return user
+    return session.user
 
 
 def get_admin_user(current_user: User = Depends(get_current_user)) -> User:

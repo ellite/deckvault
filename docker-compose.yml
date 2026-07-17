@@ -8,6 +8,8 @@ services:
     environment:
       - PUID=1000
       - PGID=1000
-      - SECRET_KEY=change-me-generate-a-random-string
+      - SECRET_KEY=change-me-generate-a-random-string  # REQUIRED: replace with `openssl rand -hex 32`
+      - COOKIE_SECURE=false  # set to true when serving over HTTPS
+      - DOCS_ENABLED=false   # set to true to expose /docs and /redoc
     volumes:
       - ./data:/app/backend/data
