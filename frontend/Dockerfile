@@ -1,9 +1,6 @@
 FROM node:22-slim AS builder
 WORKDIR /app
 
-# Install rsvg-convert for SVG→PNG icon generation
-RUN apt-get update && apt-get install -y librsvg2-bin && rm -rf /var/lib/apt/lists/*
-
 COPY package.json ./
 RUN npm install
 
@@ -13,9 +10,7 @@ ARG APP_VERSION=dev
 ENV APP_VERSION=${APP_VERSION}
 
 # Generate PNG icons from SVG
-RUN mkdir -p public/icons \
-    && rsvg-convert -w 192 -h 192 public/logo.svg -o public/icons/icon-192.png \
-    && rsvg-convert -w 512 -h 512 public/logo.svg -o public/icons/icon-512.png
+RUN node generate-icons.mjs
 
 RUN npm run build
 

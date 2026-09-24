@@ -19,9 +19,12 @@ const { title = "DeckVault", fullPage = false, showNav = false, user, activePage
     <meta name="theme-color" content="#f0f9f8" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0a1628" media="(prefers-color-scheme: dark)" />
     <meta name="description" content="Track your Steam Deck games across all storage mediums" />
-    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
-    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
-    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="/logo.svg?v=20260924-2" />
+    <link rel="apple-touch-icon" href="/icons/icon-180.png?v=20260924-2" />
+    <link rel="manifest" href="/manifest.webmanifest?v=20260924-2" crossorigin="use-credentials" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>{title} | DeckVault</title>
 
     <script is:inline>
@@ -43,7 +46,9 @@ const { title = "DeckVault", fullPage = false, showNav = false, user, activePage
 
     <script>
       if ("serviceWorker" in navigator) {
-        navigator.serviceWorker.register("/sw.js");
+        navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" })
+          .then((registration) => registration.update())
+          .catch(() => {});
       }
     </script>
   </body>

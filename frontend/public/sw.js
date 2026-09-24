@@ -1,5 +1,5 @@
-const STATIC_CACHE = "deckVault-static-v1";
-const OFFLINE_CACHE = "deckVault-offline-v1";
+const STATIC_CACHE = "deckVault-static-v3";
+const OFFLINE_CACHE = "deckVault-offline-v2";
 
 // Install: only cache the offline fallback page and static assets
 self.addEventListener("install", (e) => {
