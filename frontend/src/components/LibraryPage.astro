@@ -1,10 +1,18 @@
 ---
+import AddGameModal from "./AddGameModal.astro";
+
 interface InstallInfo {
   game_id: number;
   storage_id: number;
   storage_label: string;
   storage_type: string;
   storage_color: string;
+}
+
+interface StorageOption {
+  id: number;
+  label: string;
+  type: string;
 }
 
 interface LibraryEntry {
@@ -21,9 +29,10 @@ interface LibraryEntry {
 
 interface Props {
   entries: LibraryEntry[];
+  storageList?: StorageOption[];
 }
 
-const { entries } = Astro.props;
+const { entries, storageList = [] } = Astro.props;
 const duplicateCount = entries.filter((entry) => entry.is_duplicate).length;
 
 function typeLabel(type: string) {
@@ -38,12 +47,25 @@ function typeLabel(type: string) {
 ---
 
 <div class="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto" data-library>
-  <div class="mb-6">
-    <h1 class="text-2xl font-bold">Library</h1>
-    <p class="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-      {entries.length} {entries.length === 1 ? "game" : "games"}
-      {duplicateCount > 0 && <> · {duplicateCount} on multiple devices</>}
-    </p>
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold">Library</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+        {entries.length} {entries.length === 1 ? "game" : "games"}
+        {duplicateCount > 0 && <> · {duplicateCount} on multiple devices</>}
+      </p>
+    </div>
+
+    <button
+      type="button"
+      class="btn-primary flex items-center gap-1.5"
+      data-open-add-game
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+      </svg>
+      Add Game
+    </button>
   </div>
 
   <div class="flex gap-3 mb-6">
@@ -77,9 +99,10 @@ function typeLabel(type: string) {
         </svg>
       </div>
       <h2 class="text-xl font-bold mb-2">No games yet</h2>
-      <p class="text-slate-500 dark:text-slate-400 max-w-xs">
+      <p class="text-slate-500 dark:text-slate-400 max-w-xs mb-6">
         Add games to your storage mediums and they'll appear here.
       </p>
+      <button type="button" class="btn-primary" data-open-add-game>Add Game</button>
     </div>
   ) : (
     <>
@@ -106,7 +129,7 @@ function typeLabel(type: string) {
 
             <a href={`/games/${entry.installations[0].game_id}?from=library`} class="block aspect-[3/4] bg-slate-100 dark:bg-white/5 relative flex-shrink-0">
               {entry.cover_url ? (
-                <img src={entry.cover_url} alt={entry.title} class="w-full h-full object-cover" loading="lazy" />
+                <img src={entry.cover_url} alt={entry.title} class="w-full h-full object-cover" loading="lazy" referrerpolicy="no-referrer" />
               ) : (
                 <div class="w-full h-full flex items-center justify-center">
                   <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-slate-300 dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -147,6 +170,8 @@ function typeLabel(type: string) {
   )}
 </div>
 
+<AddGameModal storageList={storageList} />
+
 <script>
   const library = document.querySelector<HTMLElement>("[data-library]");
 
@@ -157,7 +182,14 @@ function typeLabel(type: string) {
     const empty = library.querySelector<HTMLElement>("[data-library-empty]");
     const queryLabel = library.querySelector<HTMLElement>("[data-library-query]");
     const entries = Array.from(library.querySelectorAll<HTMLElement>("[data-library-entry]"));
+    const addGameBtns = document.querySelectorAll("[data-open-add-game]");
     let duplicatesOnly = false;
+
+    addGameBtns.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        (window as any).openAddGameModal?.();
+      });
+    });
 
     const inactiveClasses = ["border-border", "dark:border-border-dark", "text-slate-500", "dark:text-slate-400", "hover:border-amber-300", "dark:hover:border-amber-500/40"];
     const activeClasses = ["border-amber-400", "bg-amber-50", "dark:bg-amber-500/10", "text-amber-700", "dark:text-amber-300"];

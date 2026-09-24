@@ -7,11 +7,13 @@ const cookies = Astro.request.headers.get("cookie") ?? "";
 
 let entries: any[] = [];
 let user: any = null;
+let storageList: any[] = [];
 
 try {
-  [entries, user] = await Promise.all([
+  [entries, user, storageList] = await Promise.all([
     apiJson<any[]>("/games/library", { cookies }),
     apiJson<any>("/auth/me", { cookies }),
+    apiJson<any[]>("/storage", { cookies }),
   ]);
 } catch (e: any) {
   if (e.status === 401) return Astro.redirect("/login");
@@ -19,5 +21,5 @@ try {
 ---
 
 <Layout title="Library" showNav={true} user={user} activePage="library">
-  <LibraryPage entries={entries} />
+  <LibraryPage entries={entries} storageList={storageList} />
 </Layout>

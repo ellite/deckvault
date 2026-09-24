@@ -1,17 +1,32 @@
 ---
-interface Props {
-  storageMediumId: number;
+interface StorageOption {
+  id: number;
+  label: string;
+  type: string;
 }
 
-const { storageMediumId } = Astro.props;
+interface Props {
+  storageMediumId?: number;
+  storageList?: StorageOption[];
+}
+
+const { storageMediumId, storageList = [] } = Astro.props;
+
+function typeLabel(type: string) {
+  const map: Record<string, string> = { local: "Internal", sdcard: "SD Card", hdd: "HDD", ssd: "SSD" };
+  return map[type] ?? type;
+}
+
+const hasFixedStorage = typeof storageMediumId === "number";
+const hasStorageOptions = storageList.length > 0;
 ---
 
 <div
   id="add-game-modal"
   class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-  data-storage-id={storageMediumId}
+  data-storage-id={storageMediumId ?? ""}
 >
-  <div class="card w-full max-w-xl p-6 space-y-4 bg-white dark:bg-surface-dark border border-border dark:border-border-dark shadow-2xl">
+  <div class="card w-full max-w-xl max-h-[90vh] overflow-y-auto p-6 space-y-4 bg-white dark:bg-surface-dark border border-border dark:border-border-dark shadow-2xl">
     <div class="flex items-center justify-between">
       <h2 class="text-lg font-bold">Add Game</h2>
       <button type="button" class="btn-ghost p-1.5" data-close-modal aria-label="Close">
@@ -21,70 +36,201 @@ const { storageMediumId } = Astro.props;
       </button>
     </div>
 
-    <!-- Search -->
-    <div>
-      <label class="label" for="add-game-search">Search IGDB</label>
-      <div class="relative">
-        <input
-          id="add-game-search"
-          class="input pr-10"
-          placeholder="Type a game name…"
-          autocomplete="off"
-        />
-        <div id="add-game-spinner" class="hidden absolute right-3 top-1/2 -translate-y-1/2">
-          <svg class="animate-spin w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+    {!hasFixedStorage && !hasStorageOptions ? (
+      <div class="py-6 text-center space-y-3">
+        <div class="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
           </svg>
         </div>
+        <h3 class="font-bold text-base">No Storage Devices Yet</h3>
+        <p class="text-sm text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+          You need at least one storage medium (Internal, SD Card, etc.) to add games to.
+        </p>
+        <div class="pt-2">
+          <a href="/storage" class="btn-primary inline-flex items-center gap-1.5">
+            Add Storage Medium
+          </a>
+        </div>
       </div>
+    ) : (
+      <>
+        <!-- Storage picker if not fixed -->
+        {!hasFixedStorage && (
+          <div>
+            <label class="label" for="add-game-storage-select">Storage Device *</label>
+            <select
+              id="add-game-storage-select"
+              class="input bg-slate-50 dark:bg-surface-dark text-slate-800 dark:text-slate-200"
+            >
+              {storageList.map((s, i) => (
+                <option value={s.id} selected={i === 0}>
+                  {s.label} ({typeLabel(s.type)})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
-      <!-- Results list -->
-      <div
-        id="add-game-results"
-        class="hidden mt-1 w-full bg-white dark:bg-surface-dark border border-border dark:border-border-dark rounded-xl shadow-xl overflow-y-auto max-h-[45dvh] sm:max-h-60"
-      ></div>
-    </div>
+        <!-- Mode switcher tabs -->
+        <div class="flex rounded-xl bg-slate-100 dark:bg-white/5 p-1 text-sm font-semibold">
+          <button
+            type="button"
+            id="tab-search-mode"
+            class="flex-1 py-1.5 rounded-lg transition-all shadow-sm bg-white dark:bg-surface-dark text-slate-900 dark:text-white"
+          >
+            Search IGDB
+          </button>
+          <button
+            type="button"
+            id="tab-manual-mode"
+            class="flex-1 py-1.5 rounded-lg transition-all text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+          >
+            Add Manually
+          </button>
+        </div>
 
-    <!-- Selected game preview -->
-    <div id="add-game-selected" class="hidden flex gap-4 p-4 bg-primary/5 dark:bg-primary/10 rounded-xl border border-primary/20">
-      <img id="selected-cover" src="" alt="" class="hidden w-16 h-22 object-cover rounded-lg flex-shrink-0" />
-      <div class="flex-1 min-w-0">
-        <p id="selected-title" class="font-bold"></p>
-        <p id="selected-genres" class="text-xs text-slate-400 mt-0.5"></p>
-        <p id="selected-year" class="text-xs text-slate-400"></p>
-        <p id="selected-summary" class="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2"></p>
-      </div>
-      <button
-        type="button"
-        id="clear-selected-btn"
-        class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 flex-shrink-0 self-start"
-        aria-label="Clear selection"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-        </svg>
-      </button>
-    </div>
+        <!-- Search Mode Section -->
+        <div id="add-game-search-section" class="space-y-4">
+          <div>
+            <label class="label" for="add-game-search">Search IGDB</label>
+            <div class="relative">
+              <input
+                id="add-game-search"
+                class="input pr-10"
+                placeholder="Type a game name…"
+                autocomplete="off"
+              />
+              <div id="add-game-spinner" class="hidden absolute right-3 top-1/2 -translate-y-1/2">
+                <svg class="animate-spin w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                </svg>
+              </div>
+            </div>
 
-    <div id="manual-add-section" class="hidden">
-      <p class="text-xs text-slate-400 dark:text-slate-500">
-        Can't find it? <button type="button" id="manual-add-btn" class="underline text-primary">Add manually</button>
-      </p>
-    </div>
+            <!-- Results list -->
+            <div
+              id="add-game-results"
+              class="hidden mt-1 w-full bg-white dark:bg-surface-dark border border-border dark:border-border-dark rounded-xl shadow-xl overflow-y-auto max-h-[45dvh] sm:max-h-60"
+            ></div>
+          </div>
 
-    <div id="add-game-error" class="hidden text-sm text-red-500"></div>
+          <!-- Selected game preview -->
+          <div id="add-game-selected" class="hidden flex gap-4 p-4 bg-primary/5 dark:bg-primary/10 rounded-xl border border-primary/20">
+            <img id="selected-cover" src="" alt="" class="hidden w-16 h-22 object-cover rounded-lg flex-shrink-0" referrerpolicy="no-referrer" />
+            <div class="flex-1 min-w-0">
+              <p id="selected-title" class="font-bold"></p>
+              <p id="selected-genres" class="text-xs text-slate-400 mt-0.5"></p>
+              <p id="selected-year" class="text-xs text-slate-400"></p>
+              <p id="selected-summary" class="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2"></p>
+            </div>
+            <button
+              type="button"
+              id="clear-selected-btn"
+              class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 flex-shrink-0 self-start"
+              aria-label="Clear selection"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
 
-    <div class="flex gap-3 pt-1">
-      <button type="button" class="btn-ghost flex-1" data-close-modal>Cancel</button>
-      <button type="button" class="btn-primary flex-1" id="add-game-submit-btn" disabled>Add Game</button>
-    </div>
+          <div id="manual-add-section" class="hidden">
+            <p class="text-xs text-slate-400 dark:text-slate-500">
+              Can't find it? <button type="button" id="manual-add-btn" class="underline text-primary font-medium hover:opacity-80">Add manually</button>
+            </p>
+          </div>
+        </div>
+
+        <!-- Manual Mode Form Section -->
+        <div id="add-game-manual-section" class="hidden space-y-4">
+          <div>
+            <label class="label" for="manual-game-title">Title *</label>
+            <input
+              id="manual-game-title"
+              class="input"
+              placeholder="e.g. Chrono Trigger"
+              autocomplete="off"
+            />
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="sm:col-span-1">
+              <label class="label" for="manual-game-year">Release Year</label>
+              <input
+                id="manual-game-year"
+                class="input"
+                type="number"
+                min="1950"
+                max="2099"
+                placeholder="e.g. 1995"
+              />
+            </div>
+
+            <div class="sm:col-span-2">
+              <label class="label" for="manual-game-cover">Poster URL</label>
+              <input
+                id="manual-game-cover"
+                class="input"
+                type="url"
+                placeholder="https://example.com/poster.jpg"
+                autocomplete="off"
+              />
+            </div>
+          </div>
+
+          <!-- Poster preview container -->
+          <div
+            id="manual-poster-preview-container"
+            class="hidden flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-border dark:border-border-dark"
+          >
+            <div class="w-12 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-slate-200 dark:bg-white/10 flex items-center justify-center">
+              <img
+                id="manual-poster-preview-img"
+                src=""
+                alt="Poster preview"
+                class="w-full h-full object-cover hidden"
+                referrerpolicy="no-referrer"
+              />
+              <svg
+                id="manual-poster-fallback-icon"
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-6 h-6 text-slate-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="text-xs font-semibold text-slate-700 dark:text-slate-300">Poster Preview</p>
+              <p id="manual-poster-preview-status" class="text-[11px] text-slate-400 truncate mt-0.5">Enter an image URL</p>
+            </div>
+          </div>
+        </div>
+
+        <div id="add-game-error" class="hidden text-sm text-red-500"></div>
+
+        <div class="flex gap-3 pt-1">
+          <button type="button" class="btn-ghost flex-1" data-close-modal>Cancel</button>
+          <button type="button" class="btn-primary flex-1" id="add-game-submit-btn" disabled>Add Game</button>
+        </div>
+      </>
+    )}
   </div>
 </div>
 
 <script>
   const modal = document.getElementById("add-game-modal");
-  const storageId = modal?.dataset.storageId;
+  const storageSelect = document.getElementById("add-game-storage-select") as HTMLSelectElement | null;
+  const tabSearch = document.getElementById("tab-search-mode");
+  const tabManual = document.getElementById("tab-manual-mode");
+  const searchSection = document.getElementById("add-game-search-section");
+  const manualSection = document.getElementById("add-game-manual-section");
+
   const searchInput = document.getElementById("add-game-search") as HTMLInputElement | null;
   const spinner = document.getElementById("add-game-spinner");
   const resultsContainer = document.getElementById("add-game-results");
@@ -97,20 +243,154 @@ const { storageMediumId } = Astro.props;
   const clearSelectedBtn = document.getElementById("clear-selected-btn");
   const manualAddSection = document.getElementById("manual-add-section");
   const manualAddBtn = document.getElementById("manual-add-btn");
+
+  const manualTitleInput = document.getElementById("manual-game-title") as HTMLInputElement | null;
+  const manualYearInput = document.getElementById("manual-game-year") as HTMLInputElement | null;
+  const manualCoverInput = document.getElementById("manual-game-cover") as HTMLInputElement | null;
+  const manualPosterContainer = document.getElementById("manual-poster-preview-container");
+  const manualPosterImg = document.getElementById("manual-poster-preview-img") as HTMLImageElement | null;
+  const manualPosterFallback = document.getElementById("manual-poster-fallback-icon");
+  const manualPosterStatus = document.getElementById("manual-poster-preview-status");
+
   const submitBtn = document.getElementById("add-game-submit-btn") as HTMLButtonElement | null;
   const errorEl = document.getElementById("add-game-error");
   const closeBtns = modal?.querySelectorAll("[data-close-modal]");
 
+  let activeMode: "search" | "manual" = "search";
   let selectedGame: any = null;
   let searchTimeout: ReturnType<typeof setTimeout>;
 
+  const activeTabClasses = ["shadow-sm", "bg-white", "dark:bg-surface-dark", "text-slate-900", "dark:text-white"];
+  const inactiveTabClasses = ["text-slate-500", "dark:text-slate-400", "hover:text-slate-900", "dark:hover:text-white"];
+
+  function setMode(mode: "search" | "manual") {
+    activeMode = mode;
+    if (mode === "search") {
+      tabSearch?.classList.remove(...inactiveTabClasses);
+      tabSearch?.classList.add(...activeTabClasses);
+      tabManual?.classList.remove(...activeTabClasses);
+      tabManual?.classList.add(...inactiveTabClasses);
+
+      searchSection?.classList.remove("hidden");
+      manualSection?.classList.add("hidden");
+    } else {
+      tabManual?.classList.remove(...inactiveTabClasses);
+      tabManual?.classList.add(...activeTabClasses);
+      tabSearch?.classList.remove(...activeTabClasses);
+      tabSearch?.classList.add(...inactiveTabClasses);
+
+      manualSection?.classList.remove("hidden");
+      searchSection?.classList.add("hidden");
+    }
+    if (errorEl) errorEl.classList.add("hidden");
+    updateSubmitState();
+  }
+
+  tabSearch?.addEventListener("click", () => {
+    setMode("search");
+    searchInput?.focus();
+  });
+
+  tabManual?.addEventListener("click", () => {
+    setMode("manual");
+    if (manualTitleInput && !manualTitleInput.value && searchInput?.value.trim()) {
+      manualTitleInput.value = searchInput.value.trim();
+    }
+    manualTitleInput?.focus();
+  });
+
+  manualAddBtn?.addEventListener("click", () => {
+    setMode("manual");
+    if (manualTitleInput && searchInput?.value.trim()) {
+      manualTitleInput.value = searchInput.value.trim();
+    }
+    manualTitleInput?.focus();
+  });
+
   function updateSubmitState() {
-    const query = searchInput?.value.trim() ?? "";
-    const canSubmit = Boolean(selectedGame || query.length > 0);
-    if (submitBtn) {
-      submitBtn.disabled = !canSubmit;
+    if (activeMode === "search") {
+      const query = searchInput?.value.trim() ?? "";
+      const canSubmit = Boolean(selectedGame || query.length > 0);
+      if (submitBtn) {
+        submitBtn.disabled = !canSubmit;
+      }
+    } else {
+      const title = manualTitleInput?.value.trim() ?? "";
+      if (submitBtn) {
+        submitBtn.disabled = title.length === 0;
+      }
     }
   }
+
+  manualTitleInput?.addEventListener("input", updateSubmitState);
+
+  let posterPreviewTimeout: ReturnType<typeof setTimeout>;
+
+  function updatePosterPreview() {
+    clearTimeout(posterPreviewTimeout);
+    const raw = manualCoverInput?.value.trim() ?? "";
+    if (!raw) {
+      manualPosterContainer?.classList.add("hidden");
+      if (manualPosterImg) {
+        manualPosterImg.src = "";
+        manualPosterImg.classList.add("hidden");
+      }
+      manualPosterFallback?.classList.remove("hidden");
+      return;
+    }
+
+    manualPosterContainer?.classList.remove("hidden");
+
+    const isLikelyUrl = raw.startsWith("http://") || raw.startsWith("https://") || raw.startsWith("data:image/") || raw.startsWith("/");
+    if (!isLikelyUrl) {
+      if (manualPosterStatus) {
+        manualPosterStatus.textContent = "Please enter a URL starting with https://";
+        manualPosterStatus.className = "text-[11px] text-slate-400 truncate mt-0.5";
+      }
+      manualPosterImg?.classList.add("hidden");
+      manualPosterFallback?.classList.remove("hidden");
+      return;
+    }
+
+    if (manualPosterStatus) {
+      manualPosterStatus.textContent = "Loading image…";
+      manualPosterStatus.className = "text-[11px] text-slate-400 truncate mt-0.5";
+    }
+
+    posterPreviewTimeout = setTimeout(() => {
+      if (manualPosterImg) {
+        manualPosterImg.referrerPolicy = "no-referrer";
+        manualPosterImg.onload = () => {
+          manualPosterImg?.classList.remove("hidden");
+          manualPosterFallback?.classList.add("hidden");
+          if (manualPosterStatus) {
+            manualPosterStatus.textContent = "Image loaded successfully";
+            manualPosterStatus.className = "text-[11px] text-emerald-600 dark:text-emerald-400 truncate mt-0.5";
+          }
+        };
+        manualPosterImg.onerror = () => {
+          manualPosterImg?.classList.add("hidden");
+          manualPosterFallback?.classList.remove("hidden");
+          if (manualPosterStatus) {
+            manualPosterStatus.textContent = "Unable to load image from URL";
+            manualPosterStatus.className = "text-[11px] text-amber-500 truncate mt-0.5";
+          }
+        };
+        manualPosterImg.src = raw;
+      }
+    }, 250);
+  }
+
+  manualCoverInput?.addEventListener("input", updatePosterPreview);
+
+  [manualTitleInput, manualYearInput, manualCoverInput].forEach((input) => {
+    input?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        submitGame();
+      }
+    });
+  });
 
   function setSelected(game: any | null) {
     selectedGame = game;
@@ -172,7 +452,7 @@ const { storageMediumId } = Astro.props;
         item.setAttribute("role", "option");
 
         const coverHtml = g.cover_url
-          ? `<img src="${g.cover_url}" alt="${g.title}" class="w-10 h-14 object-cover rounded-lg flex-shrink-0" />`
+          ? `<img src="${g.cover_url}" alt="${g.title}" class="w-10 h-14 object-cover rounded-lg flex-shrink-0" referrerpolicy="no-referrer" />`
           : `<div class="w-10 h-14 bg-slate-100 dark:bg-white/10 rounded-lg flex-shrink-0 flex items-center justify-center">
               <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
@@ -231,14 +511,55 @@ const { storageMediumId } = Astro.props;
   });
 
   async function submitGame() {
-    const query = searchInput?.value.trim() ?? "";
-    const payload = selectedGame ?? { title: query };
-    if (!payload.title) {
+    const targetStorageId = modal?.dataset.storageId || storageSelect?.value;
+    if (!targetStorageId) {
       if (errorEl) {
-        errorEl.textContent = "Enter a game name";
+        errorEl.textContent = "Please select a storage device";
         errorEl.classList.remove("hidden");
       }
       return;
+    }
+
+    let payload: any = null;
+
+    if (activeMode === "search") {
+      const query = searchInput?.value.trim() ?? "";
+      payload = selectedGame ?? (query ? { title: query } : null);
+      if (!payload?.title) {
+        if (errorEl) {
+          errorEl.textContent = "Enter a game name";
+          errorEl.classList.remove("hidden");
+        }
+        return;
+      }
+    } else {
+      const title = manualTitleInput?.value.trim() ?? "";
+      if (!title) {
+        if (errorEl) {
+          errorEl.textContent = "Please enter a game title";
+          errorEl.classList.remove("hidden");
+        }
+        manualTitleInput?.focus();
+        return;
+      }
+
+      const yearVal = manualYearInput?.value.trim() ?? "";
+      let release_year: number | null = null;
+      if (yearVal) {
+        const parsed = parseInt(yearVal, 10);
+        if (!isNaN(parsed) && parsed >= 1950 && parsed <= 2099) {
+          release_year = parsed;
+        }
+      }
+
+      const coverVal = manualCoverInput?.value.trim() ?? "";
+      const cover_url = coverVal || null;
+
+      payload = {
+        title,
+        release_year,
+        cover_url,
+      };
     }
 
     if (errorEl) errorEl.classList.add("hidden");
@@ -248,7 +569,7 @@ const { storageMediumId } = Astro.props;
     }
 
     try {
-      const res = await fetch(`/api/storage/${storageId}/games`, {
+      const res = await fetch(`/api/storage/${targetStorageId}/games`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -276,7 +597,6 @@ const { storageMediumId } = Astro.props;
   }
 
   submitBtn?.addEventListener("click", submitGame);
-  manualAddBtn?.addEventListener("click", submitGame);
 
   function closeModal() {
     if (modal) {
@@ -290,13 +610,26 @@ const { storageMediumId } = Astro.props;
     }
     if (manualAddSection) manualAddSection.classList.add("hidden");
     setSelected(null);
+
+    if (manualTitleInput) manualTitleInput.value = "";
+    if (manualYearInput) manualYearInput.value = "";
+    if (manualCoverInput) manualCoverInput.value = "";
+    updatePosterPreview();
+    if (errorEl) errorEl.classList.add("hidden");
+    setMode("search");
   }
 
-  function openModal() {
+  function openModal(options?: { mode?: "search" | "manual" }) {
     if (modal) {
       modal.classList.remove("hidden");
       modal.classList.add("flex");
-      setTimeout(() => searchInput?.focus(), 50);
+      const mode = options?.mode || "search";
+      setMode(mode);
+      if (mode === "manual") {
+        setTimeout(() => manualTitleInput?.focus(), 50);
+      } else {
+        setTimeout(() => searchInput?.focus(), 50);
+      }
     }
   }
 

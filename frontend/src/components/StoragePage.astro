@@ -408,7 +408,7 @@ const uid = `s-${storage.id}`;
       >
         <div class="aspect-[3/4] bg-slate-100 dark:bg-white/5 relative">
           {game.cover_url ? (
-            <img src={game.cover_url} alt={game.title} class="w-full h-full object-cover" loading="lazy" />
+            <img src={game.cover_url} alt={game.title} class="w-full h-full object-cover" loading="lazy" referrerpolicy="no-referrer" />
           ) : (
             <div class="w-full h-full flex items-center justify-center">
               <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-slate-300 dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">

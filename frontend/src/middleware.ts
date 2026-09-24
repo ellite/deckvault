@@ -10,7 +10,7 @@ const SECURITY_HEADERS: Record<string, string> = {
     "default-src 'self'; " +
     "script-src 'self' 'unsafe-inline'; " +
     "style-src 'self' 'unsafe-inline'; " +
-    "img-src 'self' data: https://images.igdb.com; " +
+    "img-src 'self' data: blob: https: http:; " +
     "connect-src 'self'; " +
     "font-src 'self'; " +
     "frame-ancestors 'none';",
