@@ -1,0 +1,532 @@
+---
+import GameDetailsModal from "./GameDetailsModal.astro";
+
+interface StorageOption {
+  id: number;
+  label: string;
+  type: string;
+  color?: string;
+}
+
+interface Genre {
+  id: number;
+  name: string;
+}
+
+interface Game {
+  igdb_id: number;
+  title: string;
+  cover_url: string | null;
+  genres: string | null;
+  platforms?: string | null;
+  release_year: number | null;
+  rating: number | null;
+  summary: string | null;
+}
+
+interface Props {
+  storageList?: StorageOption[];
+  libraryEntries?: any[];
+  genres?: Genre[];
+  initialGames?: Game[];
+  igdbConfigured?: boolean;
+}
+
+const {
+  storageList = [],
+  libraryEntries = [],
+  genres = [],
+  initialGames = [],
+  igdbConfigured = false,
+} = Astro.props;
+
+// Flatten library installations for installed checking
+const installedGames = libraryEntries.flatMap((entry: any) =>
+  (entry.installations || []).map((inst: any) => ({
+    igdb_id: entry.igdb_id,
+    title: entry.title,
+    storage_id: inst.storage_id,
+    storage_label: inst.storage_label,
+    storage_color: inst.storage_color,
+    storage_type: inst.storage_type,
+  }))
+);
+
+const installedIgdbIds = new Set(
+  installedGames.filter((g) => g.igdb_id).map((g) => g.igdb_id)
+);
+const installedTitles = new Set(
+  installedGames.map((g) => g.title.toLowerCase())
+);
+---
+
+<div class="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto" data-browse-page>
+  <!-- Page Header -->
+  <div class="mb-6">
+    <h1 class="text-2xl sm:text-3xl font-bold tracking-tight">Browse Games</h1>
+    <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
+      Discover new games, view details, and add them directly to your storage mediums.
+    </p>
+  </div>
+
+  {!igdbConfigured ? (
+    <div class="card p-8 sm:p-12 text-center max-w-xl mx-auto space-y-4 my-8">
+      <div class="w-14 h-14 rounded-2xl bg-amber-50 dark:bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+        </svg>
+      </div>
+      <h2 class="text-xl font-bold">IGDB Credentials Required</h2>
+      <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+        To browse and search thousands of games, configure your Twitch / IGDB Client ID and Client Secret in Settings.
+      </p>
+      <div class="pt-2">
+        <a href="/settings" class="btn-primary inline-flex items-center gap-2">
+          Configure in Settings
+        </a>
+      </div>
+    </div>
+  ) : (
+    <>
+      <!-- Search, Sort & Filters Bar -->
+      <div class="space-y-3 mb-6">
+        <div class="flex flex-col sm:flex-row gap-3">
+          <!-- Search input -->
+          <div class="relative flex-1">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              id="browse-search"
+              type="search"
+              class="input pl-10 pr-9"
+              placeholder="Search by title (e.g. Elden Ring, Mario, Cyberpunk)…"
+              autocomplete="off"
+            />
+            <div id="browse-search-spinner" class="hidden absolute right-3 top-1/2 -translate-y-1/2">
+              <svg class="animate-spin w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Filter & Sort controls -->
+          <div class="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+            <!-- Genre filter -->
+            <div class="min-w-0 sm:w-44">
+              <select id="browse-genre" class="input bg-white dark:bg-surface-dark text-xs sm:text-sm font-medium truncate">
+                <option value="">All Genres</option>
+                {genres.map((g) => (
+                  <option value={g.id}>{g.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <!-- Sort option -->
+            <div class="min-w-0 sm:w-44">
+              <select id="browse-sort" class="input bg-white dark:bg-surface-dark text-xs sm:text-sm font-medium truncate">
+                <option value="popular" selected>Most Popular</option>
+                <option value="rating">Top Rated</option>
+                <option value="newest">New Releases</option>
+                <option value="name_asc">Title (A - Z)</option>
+                <option value="relevance">Relevance</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter status info -->
+        <div id="browse-status" class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-0.5">
+          <span id="browse-count-label">
+            {initialGames.length > 0 ? `Showing ${initialGames.length} popular games` : "Browse games"}
+          </span>
+          <button type="button" id="browse-reset-filters" class="hidden underline hover:text-slate-700 dark:hover:text-slate-200">
+            Reset filters
+          </button>
+        </div>
+      </div>
+
+      <!-- Games Grid -->
+      <div
+        id="browse-grid"
+        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4"
+        data-installed-ids={JSON.stringify(Array.from(installedIgdbIds))}
+        data-installed-titles={JSON.stringify(Array.from(installedTitles))}
+        data-initial-count={initialGames.length}
+      >
+        {initialGames.map((game) => {
+          const isInstalled = (game.igdb_id && installedIgdbIds.has(game.igdb_id)) || installedTitles.has(game.title.toLowerCase());
+          return (
+            <button
+              type="button"
+              class="card overflow-hidden group text-left cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-150 flex flex-col relative focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              data-game-card
+              data-game-json={JSON.stringify(game)}
+              data-igdb-id={game.igdb_id}
+              data-title={game.title.toLowerCase()}
+            >
+              <div class="aspect-[3/4] bg-slate-100 dark:bg-white/5 relative flex-shrink-0 overflow-hidden">
+                {game.cover_url ? (
+                  <img
+                    src={game.cover_url}
+                    alt={game.title}
+                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                    loading="lazy"
+                    referrerpolicy="no-referrer"
+                  />
+                ) : (
+                  <div class="w-full h-full flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-slate-300 dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                    </svg>
+                  </div>
+                )}
+
+                {/* Rating badge */}
+                {game.rating && (
+                  <span class="absolute bottom-1.5 right-1.5 bg-black/70 backdrop-blur-sm text-amber-400 text-xs font-bold px-1.5 py-0.5 rounded-md">
+                    ★ {Math.round(game.rating)}
+                  </span>
+                )}
+
+                {/* In Library badge */}
+                <span class:list={["library-badge absolute top-1.5 left-1.5 bg-emerald-600/90 backdrop-blur-sm text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md shadow", !isInstalled && "hidden"]}>
+                  In Library
+                </span>
+              </div>
+
+              <div class="p-2.5 flex flex-col flex-1 justify-between">
+                <div>
+                  <p class="text-xs sm:text-sm font-semibold leading-snug line-clamp-2 group-hover:text-primary transition-colors">
+                    {game.title}
+                  </p>
+                  <p class="text-xs text-slate-400 dark:text-slate-500 mt-1 line-clamp-1">
+                    {[game.release_year, game.genres].filter(Boolean).join(" · ")}
+                  </p>
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      <!-- Empty state -->
+      <div id="browse-empty" class="hidden py-16 text-center space-y-3">
+        <div class="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-white/5 text-slate-400 flex items-center justify-center mx-auto">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+        <p class="font-bold text-base">No games found</p>
+        <p class="text-sm text-slate-400 dark:text-slate-500 max-w-sm mx-auto">
+          Try a different search term, switch the genre filter, or clear your search.
+        </p>
+      </div>
+
+      <!-- Load More Button & Infinite Scroll Sentinel -->
+      <div id="browse-sentinel" class="mt-8 flex flex-col items-center justify-center pb-8 min-h-[60px]">
+        <button
+          type="button"
+          id="browse-load-more"
+          class={`btn-ghost border border-border dark:border-border-dark px-6 py-2.5 text-sm font-medium inline-flex items-center gap-2 ${initialGames.length < 24 ? "hidden" : ""}`}
+        >
+          <svg id="browse-load-more-spinner" class="animate-spin w-4 h-4 text-primary hidden" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+          </svg>
+          <span id="browse-load-more-text">Load More Games</span>
+        </button>
+      </div>
+    </>
+  )}
+
+  <!-- Game Details Popup Modal / Mobile Bottom Sheet -->
+  <GameDetailsModal storageList={storageList} installedGames={installedGames} />
+</div>
+
+<script>
+  const searchInput = document.getElementById("browse-search") as HTMLInputElement | null;
+  const genreSelect = document.getElementById("browse-genre") as HTMLSelectElement | null;
+  const sortSelect = document.getElementById("browse-sort") as HTMLSelectElement | null;
+  const spinner = document.getElementById("browse-search-spinner");
+  const countLabel = document.getElementById("browse-count-label");
+  const resetBtn = document.getElementById("browse-reset-filters");
+  const grid = document.getElementById("browse-grid");
+  const emptyState = document.getElementById("browse-empty");
+  const loadMoreBtn = document.getElementById("browse-load-more") as HTMLButtonElement | null;
+  const loadMoreSpinner = document.getElementById("browse-load-more-spinner");
+  const loadMoreText = document.getElementById("browse-load-more-text");
+  const sentinel = document.getElementById("browse-sentinel");
+
+  let installedIds: number[] = [];
+  let installedTitles: string[] = [];
+  try {
+    installedIds = JSON.parse(grid?.dataset.installedIds || "[]");
+    installedTitles = JSON.parse(grid?.dataset.installedTitles || "[]");
+  } catch {}
+
+  let searchTimeout: ReturnType<typeof setTimeout>;
+  const initialCount = parseInt(grid?.dataset.initialCount || "0", 10);
+  let currentOffset = initialCount;
+  let hasMore = initialCount >= 24;
+  let isLoading = false;
+
+  function isGameInstalled(game: any) {
+    if (game.igdb_id && installedIds.includes(game.igdb_id)) return true;
+    return installedTitles.includes(game.title.toLowerCase());
+  }
+
+  function bindCardClick(card: HTMLElement) {
+    card.addEventListener("click", () => {
+      try {
+        const game = JSON.parse(card.dataset.gameJson || "{}");
+        (window as any).openGameDetailsModal?.(game);
+      } catch (e) {
+        console.error("Failed to parse game JSON", e);
+      }
+    });
+  }
+
+  // Bind initial cards
+  document.querySelectorAll<HTMLElement>("[data-game-card]").forEach(bindCardClick);
+
+  function createCardElement(game: any): HTMLElement {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className =
+      "card overflow-hidden group text-left cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-150 flex flex-col relative focus:outline-none focus-visible:ring-2 focus-visible:ring-primary";
+    card.setAttribute("data-game-card", "");
+    card.setAttribute("data-game-json", JSON.stringify(game));
+    if (game.igdb_id) card.setAttribute("data-igdb-id", String(game.igdb_id));
+    card.setAttribute("data-title", game.title.toLowerCase());
+
+    const isInstalled = isGameInstalled(game);
+
+    const coverHtml = game.cover_url
+      ? `<img src="${game.cover_url}" alt="${game.title}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" loading="lazy" referrerpolicy="no-referrer" />`
+      : `<div class="w-full h-full flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-slate-300 dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+          </svg>
+        </div>`;
+
+    const ratingHtml = game.rating
+      ? `<span class="absolute bottom-1.5 right-1.5 bg-black/70 backdrop-blur-sm text-amber-400 text-xs font-bold px-1.5 py-0.5 rounded-md">★ ${Math.round(game.rating)}</span>`
+      : "";
+
+    const metaLine = [game.release_year, game.genres].filter(Boolean).join(" · ");
+
+    card.innerHTML = `
+      <div class="aspect-[3/4] bg-slate-100 dark:bg-white/5 relative flex-shrink-0 overflow-hidden">
+        ${coverHtml}
+        ${ratingHtml}
+        <span class="library-badge absolute top-1.5 left-1.5 bg-emerald-600/90 backdrop-blur-sm text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md shadow ${isInstalled ? "" : "hidden"}">
+          In Library
+        </span>
+      </div>
+      <div class="p-2.5 flex flex-col flex-1 justify-between">
+        <div>
+          <p class="text-xs sm:text-sm font-semibold leading-snug line-clamp-2 group-hover:text-primary transition-colors">
+            ${game.title}
+          </p>
+          <p class="text-xs text-slate-400 dark:text-slate-500 mt-1 line-clamp-1">
+            ${metaLine}
+          </p>
+        </div>
+      </div>
+    `;
+
+    bindCardClick(card);
+    return card;
+  }
+
+  async function fetchGames(append = false) {
+    if (isLoading) return;
+    if (append && !hasMore) return;
+    isLoading = true;
+
+    if (!append) {
+      currentOffset = 0;
+      hasMore = true;
+      if (spinner) spinner.classList.remove("hidden");
+      if (loadMoreBtn) loadMoreBtn.classList.add("hidden");
+    } else {
+      if (loadMoreBtn) {
+        loadMoreBtn.disabled = true;
+        if (loadMoreSpinner) loadMoreSpinner.classList.remove("hidden");
+        if (loadMoreText) loadMoreText.textContent = "Loading more games…";
+      }
+    }
+
+    const query = searchInput?.value.trim() ?? "";
+    const genre = genreSelect?.value ?? "";
+    const sort = sortSelect?.value ?? "popular";
+
+    const params = new URLSearchParams();
+    if (query) params.set("q", query);
+    if (genre) params.set("genre_id", genre);
+    if (sort) params.set("sort", sort);
+    params.set("limit", "24");
+    params.set("offset", String(currentOffset));
+
+    try {
+      const res = await fetch(`/api/igdb/browse?${params.toString()}`);
+      if (!res.ok) throw new Error("Failed to fetch games");
+      const games: any[] = await res.json();
+
+      if (!grid) return;
+
+      if (!append) {
+        grid.innerHTML = "";
+      }
+
+      games.forEach((game) => {
+        grid.appendChild(createCardElement(game));
+      });
+
+      hasMore = games.length >= 24;
+      currentOffset += games.length;
+
+      // Update count & empty state
+      const totalCards = grid.querySelectorAll("[data-game-card]").length;
+      if (emptyState) {
+        emptyState.classList.toggle("hidden", totalCards > 0);
+      }
+      grid.classList.toggle("hidden", totalCards === 0);
+
+      // Status text
+      if (countLabel) {
+        if (query) {
+          countLabel.textContent = `Showing ${totalCards} results for “${query}”`;
+        } else if (genre) {
+          const genreName = genreSelect?.options[genreSelect.selectedIndex]?.text || "genre";
+          countLabel.textContent = `Showing ${totalCards} ${genreName} games`;
+        } else {
+          countLabel.textContent = `Showing ${totalCards} games`;
+        }
+      }
+
+      // Reset button visibility
+      if (resetBtn) {
+        resetBtn.classList.toggle("hidden", !query && !genre && sort === "popular");
+      }
+
+      // Load more button state
+      if (loadMoreBtn) {
+        loadMoreBtn.classList.toggle("hidden", !hasMore);
+        loadMoreBtn.disabled = false;
+        if (loadMoreSpinner) loadMoreSpinner.classList.add("hidden");
+        if (loadMoreText) loadMoreText.textContent = "Load More Games";
+      }
+    } catch (e) {
+      console.error(e);
+      if (loadMoreBtn) {
+        loadMoreBtn.disabled = false;
+        if (loadMoreSpinner) loadMoreSpinner.classList.add("hidden");
+        if (loadMoreText) loadMoreText.textContent = "Load More Games";
+      }
+    } finally {
+      isLoading = false;
+      if (spinner) spinner.classList.add("hidden");
+    }
+  }
+
+  // Search input handler
+  searchInput?.addEventListener("input", () => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      // If user typed search and sort is popular, switch to relevance
+      if (searchInput.value.trim() && sortSelect?.value === "popular") {
+        sortSelect.value = "relevance";
+      } else if (!searchInput.value.trim() && sortSelect?.value === "relevance") {
+        sortSelect.value = "popular";
+      }
+      fetchGames(false);
+    }, 350);
+  });
+
+  genreSelect?.addEventListener("change", () => fetchGames(false));
+  sortSelect?.addEventListener("change", () => fetchGames(false));
+
+  resetBtn?.addEventListener("click", () => {
+    if (searchInput) searchInput.value = "";
+    if (genreSelect) genreSelect.value = "";
+    if (sortSelect) sortSelect.value = "popular";
+    fetchGames(false);
+  });
+
+  // Manual click on button
+  loadMoreBtn?.addEventListener("click", () => {
+    fetchGames(true);
+  });
+
+  // Infinite scroll trigger via IntersectionObserver
+  if (sentinel && "IntersectionObserver" in window) {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry?.isIntersecting) {
+          if (!isLoading && hasMore && loadMoreBtn && !loadMoreBtn.classList.contains("hidden")) {
+            fetchGames(true);
+          }
+        }
+      },
+      {
+        rootMargin: "300px",
+        threshold: 0,
+      }
+    );
+    observer.observe(sentinel);
+  }
+
+  // Scroll event backup for touch/mobile devices
+  let scrollThrottleTimeout: number | undefined;
+  window.addEventListener(
+    "scroll",
+    () => {
+      if (scrollThrottleTimeout !== undefined) return;
+      scrollThrottleTimeout = window.setTimeout(() => {
+        scrollThrottleTimeout = undefined;
+        if (isLoading || !hasMore) return;
+        if (loadMoreBtn?.classList.contains("hidden")) return;
+        const scrollPosition = window.innerHeight + window.scrollY;
+        const threshold = document.documentElement.scrollHeight - 300;
+        if (scrollPosition >= threshold) {
+          fetchGames(true);
+        }
+      }, 100);
+    },
+    { passive: true }
+  );
+
+  // Listen for game additions to mark cards in library immediately
+  window.addEventListener("game-added-to-storage", (e: any) => {
+    const detail = e.detail;
+    if (!detail) return;
+
+    if (detail.igdb_id) installedIds.push(detail.igdb_id);
+    if (detail.title) installedTitles.push(detail.title.toLowerCase());
+
+    document.querySelectorAll<HTMLElement>("[data-game-card]").forEach((card) => {
+      const cardIgdbId = card.dataset.igdbId ? parseInt(card.dataset.igdbId, 10) : null;
+      const cardTitle = card.dataset.title;
+
+      const isMatch =
+        (cardIgdbId && cardIgdbId === detail.igdb_id) ||
+        (cardTitle && cardTitle === detail.title?.toLowerCase());
+
+      if (isMatch) {
+        const badge = card.querySelector(".library-badge");
+        badge?.classList.remove("hidden");
+      }
+    });
+  });
+</script>

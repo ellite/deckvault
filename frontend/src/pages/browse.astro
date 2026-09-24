@@ -1,0 +1,49 @@
+---
+import Layout from "../layouts/Layout.astro";
+import BrowsePage from "../components/BrowsePage.astro";
+import { apiJson } from "../lib/api";
+
+const cookies = Astro.request.headers.get("cookie") ?? "";
+
+let user: any = null;
+let storageList: any[] = [];
+let libraryEntries: any[] = [];
+let genres: any[] = [];
+let initialGames: any[] = [];
+let igdbConfigured = false;
+
+try {
+  const [userData, storageData, libraryData, igdbStatus] = await Promise.all([
+    apiJson<any>("/auth/me", { cookies }),
+    apiJson<any[]>("/storage", { cookies }),
+    apiJson<any[]>("/games/library", { cookies }).catch(() => []),
+    apiJson<any>("/settings/igdb", { cookies }).catch(() => ({ client_id: null, has_secret: false })),
+  ]);
+
+  user = userData;
+  storageList = storageData || [];
+  libraryEntries = libraryData || [];
+  igdbConfigured = Boolean(igdbStatus?.client_id && igdbStatus?.has_secret);
+
+  if (igdbConfigured) {
+    const [genresData, gamesData] = await Promise.all([
+      apiJson<any[]>("/igdb/genres", { cookies }).catch(() => []),
+      apiJson<any[]>("/igdb/browse?sort=popular&limit=24", { cookies }).catch(() => []),
+    ]);
+    genres = genresData || [];
+    initialGames = gamesData || [];
+  }
+} catch (e: any) {
+  if (e.status === 401) return Astro.redirect("/login");
+}
+---
+
+<Layout title="Browse Games" showNav={true} user={user} activePage="browse">
+  <BrowsePage
+    storageList={storageList}
+    libraryEntries={libraryEntries}
+    genres={genres}
+    initialGames={initialGames}
+    igdbConfigured={igdbConfigured}
+  />
+</Layout>

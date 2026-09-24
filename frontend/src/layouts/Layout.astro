@@ -2,13 +2,14 @@
 import NavBar from "../components/NavBar.astro";
 import Toast from "../components/Toast.astro";
 import ConfirmDialog from "../components/ConfirmDialog.astro";
+import ImageViewerModal from "../components/ImageViewerModal.astro";
 
 interface Props {
   title?: string;
   fullPage?: boolean;
   showNav?: boolean;
   user?: any;
-  activePage?: "dashboard" | "library" | "settings" | "about";
+  activePage?: "dashboard" | "library" | "browse" | "settings" | "about";
 }
 const { title = "DeckVault", fullPage = false, showNav = false, user, activePage } = Astro.props;
 ---
@@ -47,6 +48,7 @@ const { title = "DeckVault", fullPage = false, showNav = false, user, activePage
     <slot />
     <Toast />
     <ConfirmDialog />
+    <ImageViewerModal />
 
     <script>
       if ("serviceWorker" in navigator) {

@@ -4,7 +4,7 @@ from ..database import get_db
 from ..models import User, StorageMedium, Game
 from ..schemas import GameCreate, GameOut, GameDetailOut, InstallInfo, LibraryEntry
 from ..dependencies import get_current_user
-from ..services.igdb import search_games
+from ..services.igdb import search_games, get_genres, browse_games
 
 router = APIRouter(tags=["games"])
 
@@ -174,3 +174,31 @@ async def igdb_search(
     db: Session = Depends(get_db),
 ):
     return await search_games(q, db)
+
+
+@router.get("/igdb/genres")
+async def igdb_genres(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return await get_genres(db)
+
+
+@router.get("/igdb/browse")
+async def igdb_browse(
+    q: str | None = None,
+    sort: str = "popular",
+    genre_id: int | None = None,
+    limit: int = 24,
+    offset: int = 0,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return await browse_games(
+        query=q,
+        sort=sort,
+        genre_id=genre_id,
+        limit=min(limit, 50),
+        offset=max(offset, 0),
+        db=db,
+    )
