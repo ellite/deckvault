@@ -56,6 +56,9 @@ DeckVault tracks which games are installed across your **internal storage, SD ca
 **Storage**
 <img src="screenshots/storage.png" alt="Storage" width="800" />
 
+**Storage — Light mode**
+<img src="screenshots/storage-light.png" alt="Storage in light mode" width="800" />
+
 </details>
 
 ## Getting Started
