@@ -1,5 +1,7 @@
 ---
 import NavBar from "../components/NavBar.astro";
+import Toast from "../components/Toast.astro";
+import ConfirmDialog from "../components/ConfirmDialog.astro";
 
 interface Props {
   title?: string;
@@ -43,6 +45,8 @@ const { title = "DeckVault", fullPage = false, showNav = false, user, activePage
   ].join(" ")}>
     {showNav && <NavBar user={user} activePage={activePage} />}
     <slot />
+    <Toast />
+    <ConfirmDialog />
 
     <script>
       if ("serviceWorker" in navigator) {

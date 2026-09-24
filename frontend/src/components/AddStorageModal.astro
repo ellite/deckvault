@@ -1,0 +1,406 @@
+---
+const ACCENT_COLORS = ["#6366f1","#8b5cf6","#ec4899","#ef4444","#f59e0b","#10b981","#06b6d4","#3b82f6"];
+const PRIMARY_COLORS = ["#dc2626","#ea580c","#d97706","#16a34a","#2563eb","#7c3aed","#db2777","#e5e7eb"];
+const SECONDARY_COLORS = ["#1c1c2e","#111827","#1e293b","#0f172a","#18181b","#374151","#292524","#1a1a1a"];
+const PCB_COLORS = ["#15803d","#166534","#14532d","#1e3a5f","#1e1b4b","#1c1c2e","#111827","#18181b"];
+---
+
+<div
+  id="add-storage-modal"
+  class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+>
+  <div class="card w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 space-y-5 bg-white dark:bg-surface-dark border border-border dark:border-border-dark shadow-2xl">
+    <div class="flex items-center justify-between">
+      <h2 class="text-lg font-bold">Add Storage Medium</h2>
+      <button type="button" class="btn-ghost p-1.5" data-close-modal aria-label="Close">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Type -->
+    <div>
+      <label class="label">Type</label>
+      <div class="grid grid-cols-2 gap-2" id="storage-type-group">
+        {[
+          ["local", "🎮 Internal"],
+          ["sdcard", "💾 SD Card"],
+          ["hdd", "🖴 HDD"],
+          ["ssd", "⚡ SSD (M.2)"],
+        ].map(([val, lbl]) => (
+          <button
+            type="button"
+            data-type-val={val}
+            class={`py-3 rounded-xl border-2 text-sm font-semibold transition-colors ${
+              val === "sdcard"
+                ? "border-primary bg-primary/10 text-primary dark:border-primary-light dark:text-primary-light"
+                : "border-border dark:border-border-dark text-slate-500"
+            }`}
+          >
+            {lbl}
+          </button>
+        ))}
+      </div>
+    </div>
+
+    <!-- Label -->
+    <div>
+      <label class="label" for="add-storage-label">Label *</label>
+      <input id="add-storage-label" class="input" placeholder="e.g. SanDisk Pro 512GB" />
+    </div>
+
+    <!-- SD Card Fields: Brand & Model -->
+    <div id="sdcard-fields" class="space-y-4">
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="label" for="add-storage-brand">Brand</label>
+          <input id="add-storage-brand" class="input" placeholder="SanDisk" />
+        </div>
+        <div>
+          <label class="label" for="add-storage-model">Model</label>
+          <input id="add-storage-model" class="input" placeholder="Extreme Pro" />
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="label" for="add-storage-size">Size (GB)</label>
+        <input id="add-storage-size" type="number" class="input" placeholder="512" min="0" />
+      </div>
+      <div>
+        <label class="label" for="add-storage-free">Free (GB)</label>
+        <input id="add-storage-free" type="number" class="input" placeholder="256" min="0" />
+      </div>
+    </div>
+
+    <div>
+      <label class="label" for="add-storage-notes">Notes</label>
+      <textarea id="add-storage-notes" class="input resize-none h-20" placeholder="Optional notes…"></textarea>
+    </div>
+
+    <!-- SSD PCB color -->
+    <div id="ssd-pcb-section" class="hidden">
+      <label class="label">PCB Color</label>
+      <div class="flex gap-1.5 flex-wrap items-center" id="pcb-color-picker">
+        {PCB_COLORS.map((c, i) => (
+          <button
+            type="button"
+            data-color={c}
+            class={`w-7 h-7 rounded-full ring-offset-2 ring-offset-white dark:ring-offset-surface-dark transition-all ${
+              i === 0 ? "ring-2 ring-slate-400 scale-110" : "opacity-70 hover:opacity-100"
+            }`}
+            style={`background:${c}`}
+            aria-label={c}
+          ></button>
+        ))}
+        <input
+          id="custom-pcb-color"
+          type="color"
+          value="#15803d"
+          class="w-7 h-7 rounded-full cursor-pointer border-0 bg-transparent p-0"
+          title="Custom PCB color"
+        />
+      </div>
+    </div>
+
+    <!-- Card color preview -->
+    <div id="sdcard-colors-section">
+      <div>
+        <label class="label">Card Colors Preview</label>
+        <div class="rounded-xl overflow-hidden flex flex-col" style="height:72px; box-shadow:0 2px 8px rgba(0,0,0,0.2)">
+          <div
+            id="card-preview-top"
+            class="flex items-center justify-center text-white text-xs font-bold px-3 truncate flex-shrink-0"
+            style="background:#dc2626; height:40%"
+          >
+            Brand
+          </div>
+          <div
+            id="card-preview-bottom"
+            class="flex items-center justify-center text-white text-sm font-bold px-3 truncate"
+            style="background:#1c1c2e; height:60%"
+          >
+            Capacity
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4 mt-4">
+        <div>
+          <label class="label">Card Top Color (Brand)</label>
+          <div class="flex gap-1.5 flex-wrap" id="top-color-picker">
+            {PRIMARY_COLORS.map((c, i) => (
+              <button
+                type="button"
+                data-color={c}
+                class={`w-7 h-7 rounded-full ring-offset-2 ring-offset-white dark:ring-offset-surface-dark transition-all ${
+                  i === 0 ? "ring-2 ring-slate-400 scale-110" : "opacity-70 hover:opacity-100"
+                }`}
+                style={`background:${c}`}
+                aria-label={c}
+              ></button>
+            ))}
+            <input
+              id="custom-top-color"
+              type="color"
+              value="#dc2626"
+              class="w-7 h-7 rounded-full cursor-pointer border-0 bg-transparent p-0"
+              title="Custom color"
+            />
+          </div>
+        </div>
+        <div>
+          <label class="label">Card Bottom Color (Body)</label>
+          <div class="flex gap-1.5 flex-wrap" id="bottom-color-picker">
+            {SECONDARY_COLORS.map((c, i) => (
+              <button
+                type="button"
+                data-color={c}
+                class={`w-7 h-7 rounded-full ring-offset-2 ring-offset-white dark:ring-offset-surface-dark transition-all ${
+                  i === 0 ? "ring-2 ring-slate-400 scale-110" : "opacity-70 hover:opacity-100"
+                }`}
+                style={`background:${c}`}
+                aria-label={c}
+              ></button>
+            ))}
+            <input
+              id="custom-bottom-color"
+              type="color"
+              value="#1c1c2e"
+              class="w-7 h-7 rounded-full cursor-pointer border-0 bg-transparent p-0"
+              title="Custom color"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar accent color -->
+    <div>
+      <label class="label">Sidebar Accent Color</label>
+      <div class="flex gap-2 flex-wrap" id="accent-color-picker">
+        {ACCENT_COLORS.map((c, i) => (
+          <button
+            type="button"
+            data-color={c}
+            class={`w-7 h-7 rounded-full ring-offset-2 ring-offset-white dark:ring-offset-surface-dark transition-all ${
+              i === 0 ? "ring-2 ring-slate-400 scale-110" : "opacity-70 hover:opacity-100"
+            }`}
+            style={`background:${c}`}
+            aria-label={c}
+          ></button>
+        ))}
+      </div>
+    </div>
+
+    <div id="add-storage-error" class="hidden text-sm text-red-500"></div>
+
+    <div class="flex gap-3 pt-1">
+      <button type="button" class="btn-ghost flex-1" data-close-modal>Cancel</button>
+      <button type="button" class="btn-primary flex-1" id="add-storage-submit-btn">Add Storage</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const modal = document.getElementById("add-storage-modal");
+  const closeBtns = modal?.querySelectorAll("[data-close-modal]");
+  const submitBtn = document.getElementById("add-storage-submit-btn") as HTMLButtonElement | null;
+  const errorEl = document.getElementById("add-storage-error");
+
+  const typeButtons = modal?.querySelectorAll<HTMLButtonElement>("#storage-type-group button");
+  const sdcardFields = document.getElementById("sdcard-fields");
+  const sdcardColors = document.getElementById("sdcard-colors-section");
+  const ssdPcbSection = document.getElementById("ssd-pcb-section");
+
+  const labelInput = document.getElementById("add-storage-label") as HTMLInputElement | null;
+  const brandInput = document.getElementById("add-storage-brand") as HTMLInputElement | null;
+  const modelInput = document.getElementById("add-storage-model") as HTMLInputElement | null;
+  const sizeInput = document.getElementById("add-storage-size") as HTMLInputElement | null;
+  const freeInput = document.getElementById("add-storage-free") as HTMLInputElement | null;
+  const notesInput = document.getElementById("add-storage-notes") as HTMLTextAreaElement | null;
+
+  const cardPreviewTop = document.getElementById("card-preview-top");
+  const cardPreviewBottom = document.getElementById("card-preview-bottom");
+
+  const customPcbColor = document.getElementById("custom-pcb-color") as HTMLInputElement | null;
+  const customTopColor = document.getElementById("custom-top-color") as HTMLInputElement | null;
+  const customBottomColor = document.getElementById("custom-bottom-color") as HTMLInputElement | null;
+
+  let currentType = "sdcard";
+  let currentColor = "#6366f1";
+  let currentColorPrimary = "#dc2626";
+  let currentColorSecondary = "#1c1c2e";
+
+  function updatePreview() {
+    if (!cardPreviewTop || !cardPreviewBottom) return;
+    const brand = brandInput?.value.trim() || "Brand";
+    const model = modelInput?.value.trim();
+    cardPreviewTop.textContent = model ? `${brand} · ${model}` : brand;
+    cardPreviewTop.style.background = currentColorPrimary;
+
+    const size = sizeInput?.value.trim();
+    cardPreviewBottom.textContent = size ? `${size}GB` : "Capacity";
+    cardPreviewBottom.style.background = currentColorSecondary;
+  }
+
+  function setType(val: string) {
+    currentType = val;
+    typeButtons?.forEach((btn) => {
+      const match = btn.dataset.typeVal === val;
+      if (match) {
+        btn.className = "py-3 rounded-xl border-2 text-sm font-semibold transition-colors border-primary bg-primary/10 text-primary dark:border-primary-light dark:text-primary-light";
+      } else {
+        btn.className = "py-3 rounded-xl border-2 text-sm font-semibold transition-colors border-border dark:border-border-dark text-slate-500";
+      }
+    });
+
+    const isSD = val === "sdcard";
+    const isSSD = val === "ssd";
+
+    sdcardFields?.classList.toggle("hidden", !isSD);
+    sdcardColors?.classList.toggle("hidden", !isSD);
+    ssdPcbSection?.classList.toggle("hidden", !isSSD);
+
+    if (isSSD) {
+      currentColorPrimary = customPcbColor?.value || "#15803d";
+    } else if (isSD) {
+      currentColorPrimary = customTopColor?.value || "#dc2626";
+    }
+    updatePreview();
+  }
+
+  typeButtons?.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (btn.dataset.typeVal) setType(btn.dataset.typeVal);
+    });
+  });
+
+  [brandInput, modelInput, sizeInput].forEach((input) => {
+    input?.addEventListener("input", updatePreview);
+  });
+
+  function setupColorPicker(
+    containerId: string,
+    onColorChosen: (c: string) => void,
+    customInput?: HTMLInputElement | null
+  ) {
+    const container = document.getElementById(containerId);
+    const buttons = container?.querySelectorAll<HTMLButtonElement>("button[data-color]");
+
+    function selectColor(color: string) {
+      onColorChosen(color);
+      buttons?.forEach((btn) => {
+        const isMatch = btn.dataset.color?.toLowerCase() === color.toLowerCase();
+        if (isMatch) {
+          btn.className = "w-7 h-7 rounded-full ring-offset-2 ring-offset-white dark:ring-offset-surface-dark transition-all ring-2 ring-slate-400 scale-110";
+        } else {
+          btn.className = "w-7 h-7 rounded-full ring-offset-2 ring-offset-white dark:ring-offset-surface-dark transition-all opacity-70 hover:opacity-100";
+        }
+      });
+      if (customInput) customInput.value = color;
+      updatePreview();
+    }
+
+    buttons?.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const c = btn.dataset.color;
+        if (c) selectColor(c);
+      });
+    });
+
+    customInput?.addEventListener("input", () => {
+      selectColor(customInput.value);
+    });
+  }
+
+  setupColorPicker("top-color-picker", (c) => { currentColorPrimary = c; }, customTopColor);
+  setupColorPicker("bottom-color-picker", (c) => { currentColorSecondary = c; }, customBottomColor);
+  setupColorPicker("pcb-color-picker", (c) => { currentColorPrimary = c; }, customPcbColor);
+  setupColorPicker("accent-color-picker", (c) => { currentColor = c; });
+
+  function closeModal() {
+    if (modal) {
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    }
+  }
+
+  function openModal() {
+    if (modal) {
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+      if (labelInput) labelInput.focus();
+    }
+  }
+
+  closeBtns?.forEach((btn) => btn.addEventListener("click", closeModal));
+
+  modal?.addEventListener("mousedown", (e) => {
+    if (e.target === modal) closeModal();
+  });
+
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && modal && !modal.classList.contains("hidden")) {
+      closeModal();
+    }
+  });
+
+  submitBtn?.addEventListener("click", async () => {
+    const label = labelInput?.value.trim();
+    if (!label) {
+      if (errorEl) {
+        errorEl.textContent = "Label is required";
+        errorEl.classList.remove("hidden");
+      }
+      return;
+    }
+
+    if (errorEl) errorEl.classList.add("hidden");
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Adding…";
+    }
+
+    try {
+      const res = await fetch("/api/storage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: currentType,
+          label,
+          brand: brandInput?.value.trim() || null,
+          model: modelInput?.value.trim() || null,
+          size_gb: sizeInput?.value ? parseFloat(sizeInput.value) : null,
+          free_gb: freeInput?.value ? parseFloat(freeInput.value) : null,
+          notes: notesInput?.value.trim() || null,
+          color: currentColor,
+          color_primary: currentColorPrimary,
+          color_secondary: currentColorSecondary,
+        }),
+      });
+
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.detail ?? "Failed to create");
+      }
+
+      const created = await res.json();
+      (window as any).setPendingToast?.("Storage added!");
+      window.location.href = `/storage/${created.id}`;
+    } catch (e: any) {
+      if (errorEl) {
+        errorEl.textContent = e.message || "Failed to create storage";
+        errorEl.classList.remove("hidden");
+      }
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Add Storage";
+      }
+    }
+  });
+
+  (window as any).openAddStorageModal = openModal;
+</script>

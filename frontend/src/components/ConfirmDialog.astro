@@ -1,0 +1,66 @@
+---
+---
+<div id="confirm-dialog" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
+  <div id="confirm-backdrop" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+  <div class="relative w-full max-w-sm card p-6 shadow-2xl bg-white dark:bg-surface-dark border border-border dark:border-border-dark">
+    <h2 id="confirm-title" class="text-lg font-bold mb-2"></h2>
+    <p id="confirm-message" class="text-sm text-slate-500 dark:text-slate-400 mb-6"></p>
+    <div class="flex gap-3 justify-end">
+      <button type="button" id="confirm-cancel-btn" class="btn-ghost text-sm">Cancel</button>
+      <button type="button" id="confirm-ok-btn" class="btn-danger text-sm">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let currentOnConfirm: (() => void) | null = null;
+  const dialog = document.getElementById("confirm-dialog");
+  const backdrop = document.getElementById("confirm-backdrop");
+  const titleEl = document.getElementById("confirm-title");
+  const messageEl = document.getElementById("confirm-message");
+  const cancelBtn = document.getElementById("confirm-cancel-btn");
+  const okBtn = document.getElementById("confirm-ok-btn");
+
+  function closeDialog() {
+    if (dialog) {
+      dialog.classList.add("hidden");
+      dialog.classList.remove("flex");
+    }
+    currentOnConfirm = null;
+  }
+
+  cancelBtn?.addEventListener("click", closeDialog);
+  backdrop?.addEventListener("click", closeDialog);
+
+  okBtn?.addEventListener("click", () => {
+    const fn = currentOnConfirm;
+    closeDialog();
+    if (fn) fn();
+  });
+
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && dialog && !dialog.classList.contains("hidden")) {
+      closeDialog();
+    }
+  });
+
+  (window as any).showConfirmDialog = ({
+    title,
+    message,
+    confirmLabel = "Delete",
+    onConfirm,
+  }: {
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    onConfirm: () => void;
+  }) => {
+    if (!dialog || !titleEl || !messageEl || !okBtn) return;
+    titleEl.textContent = title;
+    messageEl.textContent = message;
+    okBtn.textContent = confirmLabel;
+    currentOnConfirm = onConfirm;
+    dialog.classList.remove("hidden");
+    dialog.classList.add("flex");
+  };
+</script>

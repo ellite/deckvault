@@ -1,6 +1,6 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import Dashboard from "../components/Dashboard.svelte";
+import Dashboard from "../components/Dashboard.astro";
 import { apiJson } from "../lib/api";
 
 const cookies = Astro.request.headers.get("cookie") ?? "";
@@ -19,7 +19,7 @@ try {
 ---
 
 <Layout title="Storage" showNav={true} user={user} activePage="dashboard">
-  <Dashboard client:load initialStorage={storageList} />
+  <Dashboard initialStorage={storageList} />
 </Layout>
 
 <script>

@@ -1,6 +1,6 @@
 ---
 import Layout from "../../layouts/Layout.astro";
-import GamePage from "../../components/GamePage.svelte";
+import GamePage from "../../components/GamePage.astro";
 import { apiJson } from "../../lib/api";
 
 const { id } = Astro.params;
@@ -23,5 +23,5 @@ try {
 ---
 
 <Layout title={game?.title ?? "Game"} showNav={true} user={user} activePage="dashboard">
-  <GamePage client:load game={game} storage={storage} />
+  <GamePage game={game} storage={storage} from={Astro.url.searchParams.get("from")} />
 </Layout>

@@ -1,0 +1,411 @@
+---
+import AddStorageModal from "./AddStorageModal.astro";
+
+interface Game {
+  id: number;
+}
+interface StorageMedium {
+  id: number;
+  type: string;
+  label: string;
+  brand?: string;
+  model?: string;
+  size_gb?: number;
+  free_gb?: number;
+  notes?: string;
+  color: string;
+  color_primary?: string;
+  color_secondary?: string;
+  games: Game[];
+}
+
+interface Props {
+  initialStorage: StorageMedium[];
+}
+
+const { initialStorage } = Astro.props;
+
+const TYPE_ORDER: Record<string, number> = { local: 0, sdcard: 1, hdd: 2, ssd: 3 };
+const TYPE_LABELS: Record<string, string> = {
+  local: "Internal Storage",
+  sdcard: "SD Cards",
+  hdd: "Hard Drives",
+  ssd: "SSDs",
+};
+
+function usedPct(s: StorageMedium) {
+  if (!s.size_gb || s.free_gb == null) return null;
+  return Math.round(((s.size_gb - s.free_gb) / s.size_gb) * 100);
+}
+
+function fmtSize(gb: number) {
+  return gb >= 1000 ? `${(gb / 1000).toFixed(1)} TB` : `${gb} GB`;
+}
+
+function typeLabel(type: string) {
+  const map: Record<string, string> = { local: "Internal", sdcard: "SD Card", hdd: "HDD", ssd: "SSD" };
+  return map[type] ?? type;
+}
+
+const typeSorted = [...initialStorage].sort((a, b) => {
+  const td = (TYPE_ORDER[a.type] ?? 99) - (TYPE_ORDER[b.type] ?? 99);
+  return td !== 0 ? td : a.label.localeCompare(b.label);
+});
+
+const groupsMap = new Map<string, StorageMedium[]>();
+for (const s of typeSorted) {
+  if (!groupsMap.has(s.type)) groupsMap.set(s.type, []);
+  groupsMap.get(s.type)!.push(s);
+}
+const groups = [...groupsMap.entries()].map(([type, items]) => ({
+  type,
+  label: TYPE_LABELS[type] ?? type,
+  items,
+}));
+---
+
+<div class="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto" data-dashboard>
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold">Storage</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+        {initialStorage.length} {initialStorage.length === 1 ? "medium" : "mediums"}
+      </p>
+    </div>
+
+    <div class="flex items-center gap-2">
+      {initialStorage.length > 1 && (
+        <div class="relative" data-sort-container>
+          <button
+            type="button"
+            data-sort-trigger
+            class="flex items-center gap-1.5 px-4 py-2 rounded-xl font-medium border border-border dark:border-border-dark hover:bg-slate-50 dark:hover:bg-white/5 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 4h13M3 8h9m-9 4h9m5-4v12m0 0l-4-4m4 4l4-4"/>
+            </svg>
+            <span data-sort-label>Type</span>
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-slate-400 transition-transform" data-sort-chevron fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+            </svg>
+          </button>
+
+          <div class="hidden absolute right-0 top-full mt-1.5 z-20 w-44 card shadow-xl py-1 overflow-hidden bg-white dark:bg-surface-dark border border-border dark:border-border-dark" data-sort-menu>
+            {[
+              ["type", "Type"],
+              ["total", "Total"],
+              ["used", "Used"],
+              ["free", "Available"],
+              ["games", "Games"],
+            ].map(([val, lbl]) => (
+              <button
+                type="button"
+                data-sort-val={val}
+                class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-left transition-colors hover:bg-slate-50 dark:hover:bg-white/5 text-slate-700 dark:text-slate-300"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 flex-shrink-0 invisible" data-sort-check fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                </svg>
+                <span>{lbl}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <button type="button" class="btn-primary flex items-center gap-1.5" data-open-add-storage>
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+        </svg>
+        Add Storage
+      </button>
+    </div>
+  </div>
+
+  {initialStorage.length === 0 ? (
+    <div class="flex flex-col items-center justify-center min-h-[55vh] text-center">
+      <div class="w-20 h-20 rounded-2xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center mb-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
+        </svg>
+      </div>
+      <h2 class="text-xl font-bold mb-2">No storage yet</h2>
+      <p class="text-slate-500 dark:text-slate-400 mb-6 max-w-xs">
+        Add your internal storage, SD cards, or external drives to start tracking your library.
+      </p>
+      <button type="button" class="btn-primary" data-open-add-storage>Add Storage Medium</button>
+    </div>
+  ) : (
+    <>
+      <!-- Grouped by type -->
+      <div id="dashboard-grouped">
+        {groups.map((group, i) => (
+          <div class={i > 0 ? "mt-8" : ""}>
+            <div class="flex items-center gap-3 mb-4">
+              <h2 class="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                {group.label}
+              </h2>
+              <div class="flex-1 h-px bg-border dark:bg-border-dark"></div>
+              <span class="text-xs text-slate-400 dark:text-slate-500 flex-shrink-0">{group.items.length}</span>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+              {group.items.map((s) => {
+                const pct = usedPct(s);
+                return (
+                  <a
+                    href={`/storage/${s.id}`}
+                    class="card group block overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all duration-150 no-underline"
+                  >
+                    <div class="h-1.5 w-full" style={`background:${s.color}`}></div>
+                    <div class="p-4 sm:p-5">
+                      <div class="flex items-start justify-between gap-2 mb-3">
+                        <div class="min-w-0">
+                          <h2 class="font-bold text-base leading-snug truncate">{s.label}</h2>
+                          <p class="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                            {[s.brand, s.model].filter(Boolean).join(" · ") || "\u00A0"}
+                          </p>
+                        </div>
+                        <span
+                          class="flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-semibold"
+                          style={`background:${s.color}22; color:${s.color}`}
+                        >
+                          {typeLabel(s.type)}
+                        </span>
+                      </div>
+
+                      {s.size_gb && (
+                        <div class="mb-3">
+                          <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-1.5">
+                            {pct !== null ? (
+                              <>
+                                <span>{fmtSize(s.size_gb - (s.free_gb ?? 0))} used</span>
+                                <span>{fmtSize(s.free_gb!)} free</span>
+                              </>
+                            ) : (
+                              <span>{fmtSize(s.size_gb)}</span>
+                            )}
+                          </div>
+                          <div class="w-full h-1.5 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden">
+                            {pct !== null ? (
+                              <div class="h-full rounded-full" style={`width:${pct}%; background:${s.color}; opacity:0.85`}></div>
+                            ) : (
+                              <div class="h-full rounded-full w-full" style={`background:${s.color}; opacity:0.25`}></div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      <div class="flex items-center justify-between mt-3 pt-3 border-t border-border dark:border-border-dark">
+                        <div class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                          </svg>
+                          <span class="text-sm font-medium">{s.games.length} {s.games.length === 1 ? "game" : "games"}</span>
+                        </div>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-slate-500 dark:group-hover:text-slate-300 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                        </svg>
+                      </div>
+                    </div>
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <!-- Flat sorted grid -->
+      <div id="dashboard-flat" class="hidden grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        {initialStorage.map((s) => {
+          const pct = usedPct(s);
+          const used = s.size_gb != null ? s.size_gb - (s.free_gb ?? 0) : -1;
+          return (
+            <a
+              href={`/storage/${s.id}`}
+              class="card group block overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all duration-150 no-underline"
+              data-storage-card
+              data-size={s.size_gb ?? -1}
+              data-used={used}
+              data-free={s.free_gb ?? -1}
+              data-games={s.games.length}
+            >
+              <div class="h-1.5 w-full" style={`background:${s.color}`}></div>
+              <div class="p-4 sm:p-5">
+                <div class="flex items-start justify-between gap-2 mb-3">
+                  <div class="min-w-0">
+                    <h2 class="font-bold text-base leading-snug truncate">{s.label}</h2>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                      {[s.brand, s.model].filter(Boolean).join(" · ") || "\u00A0"}
+                    </p>
+                  </div>
+                  <span
+                    class="flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-semibold"
+                    style={`background:${s.color}22; color:${s.color}`}
+                  >
+                    {typeLabel(s.type)}
+                  </span>
+                </div>
+
+                {s.size_gb && (
+                  <div class="mb-3">
+                    <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-1.5">
+                      {pct !== null ? (
+                        <>
+                          <span>{fmtSize(s.size_gb - (s.free_gb ?? 0))} used</span>
+                          <span>{fmtSize(s.free_gb!)} free</span>
+                        </>
+                      ) : (
+                        <span>{fmtSize(s.size_gb)}</span>
+                      )}
+                    </div>
+                    <div class="w-full h-1.5 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden">
+                      {pct !== null ? (
+                        <div class="h-full rounded-full" style={`width:${pct}%; background:${s.color}; opacity:0.85`}></div>
+                      ) : (
+                        <div class="h-full rounded-full w-full" style={`background:${s.color}; opacity:0.25`}></div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div class="flex items-center justify-between mt-3 pt-3 border-t border-border dark:border-border-dark">
+                  <div class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                    </svg>
+                    <span class="text-sm font-medium">{s.games.length} {s.games.length === 1 ? "game" : "games"}</span>
+                  </div>
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-slate-500 dark:group-hover:text-slate-300 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                  </svg>
+                </div>
+              </div>
+            </a>
+          );
+        })}
+      </div>
+    </>
+  )}
+</div>
+
+<AddStorageModal />
+
+<script>
+  const sortContainer = document.querySelector<HTMLElement>("[data-sort-container]");
+  const sortTrigger = sortContainer?.querySelector<HTMLButtonElement>("[data-sort-trigger]");
+  const sortMenu = sortContainer?.querySelector<HTMLElement>("[data-sort-menu]");
+  const sortLabel = sortContainer?.querySelector<HTMLElement>("[data-sort-label]");
+  const sortChevron = sortContainer?.querySelector<HTMLElement>("[data-sort-chevron]");
+  const sortOptions = sortContainer?.querySelectorAll<HTMLButtonElement>("button[data-sort-val]");
+
+  const groupedView = document.getElementById("dashboard-grouped");
+  const flatView = document.getElementById("dashboard-flat");
+
+  const SORT_LABELS: Record<string, string> = {
+    type: "Type",
+    total: "Total",
+    used: "Used",
+    free: "Available",
+    games: "Games",
+  };
+
+  function setSortMenuOpen(open: boolean) {
+    sortMenu?.classList.toggle("hidden", !open);
+    sortChevron?.classList.toggle("rotate-180", open);
+  }
+
+  function applySort(mode: string) {
+    if (sortLabel) sortLabel.textContent = SORT_LABELS[mode] ?? mode;
+
+    sortOptions?.forEach((opt) => {
+      const match = opt.dataset.sortVal === mode;
+      const check = opt.querySelector<HTMLElement>("[data-sort-check]");
+      check?.classList.toggle("invisible", !match);
+      if (match) {
+        opt.className = "w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-left transition-colors hover:bg-slate-50 dark:hover:bg-white/5 text-primary dark:text-primary-light font-semibold";
+      } else {
+        opt.className = "w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-left transition-colors hover:bg-slate-50 dark:hover:bg-white/5 text-slate-700 dark:text-slate-300";
+      }
+    });
+
+    if (mode === "type") {
+      groupedView?.classList.remove("hidden");
+      flatView?.classList.add("hidden");
+    } else {
+      groupedView?.classList.add("hidden");
+      flatView?.classList.remove("hidden");
+
+      if (flatView) {
+        const cards = Array.from(flatView.querySelectorAll<HTMLElement>("[data-storage-card]"));
+        cards.sort((a, b) => {
+          const aSize = parseFloat(a.dataset.size ?? "-1");
+          const bSize = parseFloat(b.dataset.size ?? "-1");
+          const aUsed = parseFloat(a.dataset.used ?? "-1");
+          const bUsed = parseFloat(b.dataset.used ?? "-1");
+          const aFree = parseFloat(a.dataset.free ?? "-1");
+          const bFree = parseFloat(b.dataset.free ?? "-1");
+          const aGames = parseInt(a.dataset.games ?? "0", 10);
+          const bGames = parseInt(b.dataset.games ?? "0", 10);
+
+          if (mode === "total") return bSize - aSize;
+          if (mode === "used") return bUsed - aUsed;
+          if (mode === "free") return bFree - aFree;
+          if (mode === "games") return bGames - aGames;
+          return 0;
+        });
+
+        cards.forEach((card) => flatView.appendChild(card));
+      }
+    }
+
+    try {
+      localStorage.setItem("dv-sort", mode);
+    } catch {}
+  }
+
+  sortTrigger?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const willOpen = sortMenu?.classList.contains("hidden") ?? false;
+    setSortMenuOpen(willOpen);
+  });
+
+  document.addEventListener("click", () => {
+    setSortMenuOpen(false);
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") setSortMenuOpen(false);
+  });
+
+  sortOptions?.forEach((opt) => {
+    opt.addEventListener("click", () => {
+      const mode = opt.dataset.sortVal;
+      if (mode) {
+        applySort(mode);
+        setSortMenuOpen(false);
+      }
+    });
+  });
+
+  const savedSort = (() => {
+    try {
+      return localStorage.getItem("dv-sort");
+    } catch {
+      return null;
+    }
+  })();
+
+  if (savedSort && ["type", "total", "used", "free", "games"].includes(savedSort)) {
+    applySort(savedSort);
+  } else {
+    applySort("type");
+  }
+
+  document.querySelectorAll("[data-open-add-storage]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      (window as any).openAddStorageModal?.();
+    });
+  });
+</script>

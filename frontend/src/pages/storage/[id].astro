@@ -1,6 +1,6 @@
 ---
 import Layout from "../../layouts/Layout.astro";
-import StoragePage from "../../components/StoragePage.svelte";
+import StoragePage from "../../components/StoragePage.astro";
 import { apiJson } from "../../lib/api";
 
 const { id } = Astro.params;
@@ -21,5 +21,5 @@ try {
 ---
 
 <Layout title={storage?.label ?? "Storage"} showNav={true} user={user} activePage="dashboard">
-  <StoragePage client:load storage={storage} />
+  <StoragePage storage={storage} />
 </Layout>

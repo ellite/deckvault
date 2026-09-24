@@ -1,0 +1,316 @@
+---
+interface Props {
+  storageMediumId: number;
+}
+
+const { storageMediumId } = Astro.props;
+---
+
+<div
+  id="add-game-modal"
+  class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+  data-storage-id={storageMediumId}
+>
+  <div class="card w-full max-w-xl p-6 space-y-4 bg-white dark:bg-surface-dark border border-border dark:border-border-dark shadow-2xl">
+    <div class="flex items-center justify-between">
+      <h2 class="text-lg font-bold">Add Game</h2>
+      <button type="button" class="btn-ghost p-1.5" data-close-modal aria-label="Close">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Search -->
+    <div>
+      <label class="label" for="add-game-search">Search IGDB</label>
+      <div class="relative">
+        <input
+          id="add-game-search"
+          class="input pr-10"
+          placeholder="Type a game name…"
+          autocomplete="off"
+        />
+        <div id="add-game-spinner" class="hidden absolute right-3 top-1/2 -translate-y-1/2">
+          <svg class="animate-spin w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Results list -->
+      <div
+        id="add-game-results"
+        class="hidden mt-1 w-full bg-white dark:bg-surface-dark border border-border dark:border-border-dark rounded-xl shadow-xl overflow-y-auto max-h-[45dvh] sm:max-h-60"
+      ></div>
+    </div>
+
+    <!-- Selected game preview -->
+    <div id="add-game-selected" class="hidden flex gap-4 p-4 bg-primary/5 dark:bg-primary/10 rounded-xl border border-primary/20">
+      <img id="selected-cover" src="" alt="" class="hidden w-16 h-22 object-cover rounded-lg flex-shrink-0" />
+      <div class="flex-1 min-w-0">
+        <p id="selected-title" class="font-bold"></p>
+        <p id="selected-genres" class="text-xs text-slate-400 mt-0.5"></p>
+        <p id="selected-year" class="text-xs text-slate-400"></p>
+        <p id="selected-summary" class="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2"></p>
+      </div>
+      <button
+        type="button"
+        id="clear-selected-btn"
+        class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 flex-shrink-0 self-start"
+        aria-label="Clear selection"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <div id="manual-add-section" class="hidden">
+      <p class="text-xs text-slate-400 dark:text-slate-500">
+        Can't find it? <button type="button" id="manual-add-btn" class="underline text-primary">Add manually</button>
+      </p>
+    </div>
+
+    <div id="add-game-error" class="hidden text-sm text-red-500"></div>
+
+    <div class="flex gap-3 pt-1">
+      <button type="button" class="btn-ghost flex-1" data-close-modal>Cancel</button>
+      <button type="button" class="btn-primary flex-1" id="add-game-submit-btn" disabled>Add Game</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const modal = document.getElementById("add-game-modal");
+  const storageId = modal?.dataset.storageId;
+  const searchInput = document.getElementById("add-game-search") as HTMLInputElement | null;
+  const spinner = document.getElementById("add-game-spinner");
+  const resultsContainer = document.getElementById("add-game-results");
+  const selectedContainer = document.getElementById("add-game-selected");
+  const selectedCover = document.getElementById("selected-cover") as HTMLImageElement | null;
+  const selectedTitle = document.getElementById("selected-title");
+  const selectedGenres = document.getElementById("selected-genres");
+  const selectedYear = document.getElementById("selected-year");
+  const selectedSummary = document.getElementById("selected-summary");
+  const clearSelectedBtn = document.getElementById("clear-selected-btn");
+  const manualAddSection = document.getElementById("manual-add-section");
+  const manualAddBtn = document.getElementById("manual-add-btn");
+  const submitBtn = document.getElementById("add-game-submit-btn") as HTMLButtonElement | null;
+  const errorEl = document.getElementById("add-game-error");
+  const closeBtns = modal?.querySelectorAll("[data-close-modal]");
+
+  let selectedGame: any = null;
+  let searchTimeout: ReturnType<typeof setTimeout>;
+
+  function updateSubmitState() {
+    const query = searchInput?.value.trim() ?? "";
+    const canSubmit = Boolean(selectedGame || query.length > 0);
+    if (submitBtn) {
+      submitBtn.disabled = !canSubmit;
+    }
+  }
+
+  function setSelected(game: any | null) {
+    selectedGame = game;
+    if (game) {
+      if (selectedContainer) selectedContainer.classList.remove("hidden");
+      if (selectedTitle) selectedTitle.textContent = game.title;
+      if (selectedGenres) selectedGenres.textContent = game.genres || "";
+      if (selectedYear) selectedYear.textContent = game.release_year ? String(game.release_year) : "";
+      if (selectedSummary) selectedSummary.textContent = game.summary || "";
+      if (selectedCover) {
+        if (game.cover_url) {
+          selectedCover.src = game.cover_url;
+          selectedCover.alt = game.title;
+          selectedCover.classList.remove("hidden");
+        } else {
+          selectedCover.classList.add("hidden");
+        }
+      }
+      if (resultsContainer) resultsContainer.classList.add("hidden");
+      if (manualAddSection) manualAddSection.classList.add("hidden");
+    } else {
+      if (selectedContainer) selectedContainer.classList.add("hidden");
+      const query = searchInput?.value.trim() ?? "";
+      if (query.length > 0 && manualAddSection) {
+        manualAddSection.classList.remove("hidden");
+      }
+    }
+    updateSubmitState();
+  }
+
+  clearSelectedBtn?.addEventListener("click", () => {
+    setSelected(null);
+  });
+
+  async function performSearch(query: string) {
+    if (spinner) spinner.classList.remove("hidden");
+    if (errorEl) errorEl.classList.add("hidden");
+
+    try {
+      const res = await fetch(`/api/igdb/search?q=${encodeURIComponent(query)}`);
+      if (!res.ok) throw new Error("Search failed");
+      const results: any[] = await res.json();
+
+      if (!resultsContainer) return;
+      resultsContainer.innerHTML = "";
+
+      if (results.length === 0) {
+        resultsContainer.classList.add("hidden");
+        if (manualAddSection) {
+          manualAddSection.classList.remove("hidden");
+          if (manualAddBtn) manualAddBtn.textContent = `Add "${query}" manually`;
+        }
+        return;
+      }
+
+      results.forEach((g) => {
+        const item = document.createElement("div");
+        item.className = "flex items-center gap-3 p-3 hover:bg-slate-50 dark:hover:bg-white/5 cursor-pointer transition-colors";
+        item.setAttribute("role", "option");
+
+        const coverHtml = g.cover_url
+          ? `<img src="${g.cover_url}" alt="${g.title}" class="w-10 h-14 object-cover rounded-lg flex-shrink-0" />`
+          : `<div class="w-10 h-14 bg-slate-100 dark:bg-white/10 rounded-lg flex-shrink-0 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+              </svg>
+            </div>`;
+
+        const metaParts = [g.release_year ?? "Unknown year", g.genres].filter(Boolean).join(" · ");
+        const ratingHtml = g.rating ? `<p class="text-xs text-amber-500 font-semibold mt-0.5">★ ${g.rating}/100</p>` : "";
+
+        item.innerHTML = `
+          ${coverHtml}
+          <div class="flex-1 min-w-0">
+            <p class="font-semibold text-sm truncate">${g.title}</p>
+            <p class="text-xs text-slate-400 dark:text-slate-500">${metaParts}</p>
+            ${ratingHtml}
+          </div>
+        `;
+
+        item.addEventListener("click", () => {
+          setSelected(g);
+        });
+
+        resultsContainer.appendChild(item);
+      });
+
+      resultsContainer.classList.remove("hidden");
+      if (manualAddSection) {
+        manualAddSection.classList.remove("hidden");
+        if (manualAddBtn) manualAddBtn.textContent = `Add "${query}" manually`;
+      }
+    } catch (e: any) {
+      if (errorEl) {
+        errorEl.textContent = e.message || "Search failed";
+        errorEl.classList.remove("hidden");
+      }
+    } finally {
+      if (spinner) spinner.classList.add("hidden");
+    }
+  }
+
+  searchInput?.addEventListener("input", () => {
+    clearTimeout(searchTimeout);
+    setSelected(null);
+    const query = searchInput.value.trim();
+    if (query.length < 2) {
+      if (resultsContainer) {
+        resultsContainer.innerHTML = "";
+        resultsContainer.classList.add("hidden");
+      }
+      if (manualAddSection) manualAddSection.classList.add("hidden");
+      updateSubmitState();
+      return;
+    }
+    updateSubmitState();
+    searchTimeout = setTimeout(() => performSearch(query), 400);
+  });
+
+  async function submitGame() {
+    const query = searchInput?.value.trim() ?? "";
+    const payload = selectedGame ?? { title: query };
+    if (!payload.title) {
+      if (errorEl) {
+        errorEl.textContent = "Enter a game name";
+        errorEl.classList.remove("hidden");
+      }
+      return;
+    }
+
+    if (errorEl) errorEl.classList.add("hidden");
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Adding…";
+    }
+
+    try {
+      const res = await fetch(`/api/storage/${storageId}/games`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.detail ?? "Failed to add game");
+      }
+
+      const game = await res.json();
+      (window as any).setPendingToast?.(`"${game.title}" added!`);
+      closeModal();
+      window.location.reload();
+    } catch (e: any) {
+      if (errorEl) {
+        errorEl.textContent = e.message || "Failed to add game";
+        errorEl.classList.remove("hidden");
+      }
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Add Game";
+      }
+    }
+  }
+
+  submitBtn?.addEventListener("click", submitGame);
+  manualAddBtn?.addEventListener("click", submitGame);
+
+  function closeModal() {
+    if (modal) {
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    }
+    if (searchInput) searchInput.value = "";
+    if (resultsContainer) {
+      resultsContainer.innerHTML = "";
+      resultsContainer.classList.add("hidden");
+    }
+    if (manualAddSection) manualAddSection.classList.add("hidden");
+    setSelected(null);
+  }
+
+  function openModal() {
+    if (modal) {
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+      setTimeout(() => searchInput?.focus(), 50);
+    }
+  }
+
+  closeBtns?.forEach((btn) => btn.addEventListener("click", closeModal));
+
+  modal?.addEventListener("mousedown", (e) => {
+    if (e.target === modal) closeModal();
+  });
+
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && modal && !modal.classList.contains("hidden")) {
+      closeModal();
+    }
+  });
+
+  (window as any).openAddGameModal = openModal;
+</script>
