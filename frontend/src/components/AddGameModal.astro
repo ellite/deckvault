@@ -23,10 +23,13 @@ const hasStorageOptions = storageList.length > 0;
 
 <div
   id="add-game-modal"
-  class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+  class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4"
   data-storage-id={storageMediumId ?? ""}
 >
-  <div class="card w-full max-w-xl max-h-[90vh] overflow-y-auto p-6 space-y-4 bg-white dark:bg-surface-dark border border-border dark:border-border-dark shadow-2xl">
+  <div class="modal-sheet-content card w-full sm:max-w-xl max-h-[88dvh] sm:max-h-[90vh] overflow-y-auto overscroll-contain rounded-t-3xl sm:rounded-2xl rounded-b-none sm:rounded-b-2xl border-t sm:border border-x-0 sm:border-x border-b-0 sm:border-b border-border dark:border-border-dark p-5 sm:p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] space-y-4 bg-white dark:bg-surface-dark shadow-2xl">
+    <div class="sm:hidden flex justify-center pt-1 pb-2 -mt-1 cursor-grab touch-none" data-sheet-handle>
+      <div class="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20"></div>
+    </div>
     <div class="flex items-center justify-between">
       <h2 class="text-lg font-bold">Add Game</h2>
       <button type="button" class="btn-ghost p-1.5" data-close-modal aria-label="Close">
@@ -598,10 +601,47 @@ const hasStorageOptions = storageList.length > 0;
 
   submitBtn?.addEventListener("click", submitGame);
 
+  const sheetContent = modal?.querySelector<HTMLElement>(".modal-sheet-content");
+  const sheetHandle = modal?.querySelector<HTMLElement>("[data-sheet-handle]");
+
+  let touchStartY = 0;
+  let touchDeltaY = 0;
+
+  sheetHandle?.addEventListener("touchstart", (e) => {
+    touchStartY = e.touches[0].clientY;
+    touchDeltaY = 0;
+    if (sheetContent) sheetContent.style.transition = "none";
+  }, { passive: true });
+
+  sheetHandle?.addEventListener("touchmove", (e) => {
+    touchDeltaY = e.touches[0].clientY - touchStartY;
+    if (touchDeltaY > 0 && sheetContent) {
+      sheetContent.style.transform = `translateY(${touchDeltaY}px)`;
+    }
+  }, { passive: true });
+
+  sheetHandle?.addEventListener("touchend", () => {
+    if (sheetContent) {
+      sheetContent.style.transition = "transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)";
+      if (touchDeltaY > 60) {
+        sheetContent.style.transform = "translateY(100%)";
+        setTimeout(closeModal, 180);
+      } else {
+        sheetContent.style.transform = "";
+      }
+    }
+    touchStartY = 0;
+    touchDeltaY = 0;
+  });
+
   function closeModal() {
     if (modal) {
       modal.classList.add("hidden");
       modal.classList.remove("flex");
+    }
+    if (sheetContent) {
+      sheetContent.style.transform = "";
+      sheetContent.style.transition = "";
     }
     if (searchInput) searchInput.value = "";
     if (resultsContainer) {
@@ -635,7 +675,7 @@ const hasStorageOptions = storageList.length > 0;
 
   closeBtns?.forEach((btn) => btn.addEventListener("click", closeModal));
 
-  modal?.addEventListener("mousedown", (e) => {
+  modal?.addEventListener("click", (e) => {
     if (e.target === modal) closeModal();
   });
 
@@ -647,3 +687,20 @@ const hasStorageOptions = storageList.length > 0;
 
   (window as any).openAddGameModal = openModal;
 </script>
+
+<style>
+  @media (max-width: 639px) {
+    .modal-sheet-content {
+      animation: sheetSlideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+  }
+
+  @keyframes sheetSlideUp {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+</style>
