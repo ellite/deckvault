@@ -142,6 +142,17 @@ def get_game(
     return {**GameOut.model_validate(game).model_dump(), "other_installations": other_installations}
 
 
+@router.delete("/games/library", status_code=status.HTTP_204_NO_CONTENT)
+def delete_all_games(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    medium_ids = [m.id for m in db.query(StorageMedium.id).filter(StorageMedium.user_id == current_user.id).all()]
+    if medium_ids:
+        db.query(Game).filter(Game.storage_medium_id.in_(medium_ids)).delete(synchronize_session=False)
+        db.commit()
+
+
 @router.delete("/games/{game_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_game(
     game_id: int,

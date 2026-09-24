@@ -20,7 +20,7 @@ const { user, activePage } = Astro.props;
        class={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-colors ${
          activePage === "dashboard"
            ? "bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-light"
-           : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/8"
+           : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white"
        }`}>
       Storage
     </a>
@@ -28,7 +28,7 @@ const { user, activePage } = Astro.props;
        class={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-colors ${
          activePage === "library"
            ? "bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-light"
-           : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/8"
+           : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white"
        }`}>
       Library
     </a>

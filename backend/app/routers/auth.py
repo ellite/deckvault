@@ -113,3 +113,21 @@ def change_password(
     current_user.hashed_password = hash_password(data.new_password)
     db.commit()
     return {"ok": True}
+
+
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+def delete_account(
+    response: Response,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    admin_count = db.query(User).filter(User.is_admin == True).count()
+    other_users_count = db.query(User).filter(User.id != current_user.id).count()
+    if current_user.is_admin and admin_count <= 1 and other_users_count > 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete account: you are the only admin and other users exist. Make another user an admin first."
+        )
+    db.delete(current_user)
+    db.commit()
+    response.delete_cookie(key=COOKIE_NAME)

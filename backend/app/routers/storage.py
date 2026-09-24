@@ -64,6 +64,17 @@ def update_storage(
     return medium
 
 
+@router.delete("", status_code=status.HTTP_204_NO_CONTENT)
+def delete_all_storage(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    mediums = db.query(StorageMedium).filter(StorageMedium.user_id == current_user.id).all()
+    for m in mediums:
+        db.delete(m)
+    db.commit()
+
+
 @router.delete("/{medium_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_storage(
     medium_id: int,

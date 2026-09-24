@@ -132,6 +132,83 @@ try {
         </section>
       )}
 
+      <!-- Data Management -->
+      <section class="card p-6 space-y-5">
+        <div>
+          <h2 class="font-bold text-lg">Data Management</h2>
+          <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Manage your library games and storage mediums.
+          </p>
+        </div>
+
+        <div class="space-y-4 pt-2">
+          <!-- Delete all games -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-border dark:border-border-dark">
+            <div>
+              <p class="font-semibold text-sm">Delete All Games</p>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Remove all games from your library. Your storage devices will be kept.
+              </p>
+            </div>
+            <button
+              type="button"
+              id="delete-games-btn"
+              class="btn-danger text-sm flex-shrink-0"
+            >
+              Delete All Games
+            </button>
+          </div>
+
+          <!-- Delete all storage -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <p class="font-semibold text-sm">Delete All Storage</p>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Remove all storage devices and all games installed on them.
+              </p>
+            </div>
+            <button
+              type="button"
+              id="delete-storage-btn"
+              class="btn-danger text-sm flex-shrink-0"
+            >
+              Delete All Storage
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Danger Zone -->
+      <section class="card p-6 space-y-5 border border-red-200 dark:border-red-500/20 bg-red-50/20 dark:bg-red-500/5">
+        <div>
+          <h2 class="font-bold text-lg text-red-600 dark:text-red-400 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+            </svg>
+            Danger Zone
+          </h2>
+          <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Irreversible actions that affect your entire account.
+          </p>
+        </div>
+
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+          <div>
+            <p class="font-semibold text-sm text-red-600 dark:text-red-400">Delete Account</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Permanently delete your account, storage devices, and entire game library.
+            </p>
+          </div>
+          <button
+            type="button"
+            id="delete-account-btn"
+            class="btn-danger text-sm flex-shrink-0"
+          >
+            Delete Account
+          </button>
+        </div>
+      </section>
+
   </main>
 
   <script>
@@ -223,5 +300,78 @@ try {
       } catch {}
     });
 
+    // Delete all games
+    document.getElementById("delete-games-btn")?.addEventListener("click", () => {
+      (window as any).showConfirmDialog?.({
+        title: "Delete all games",
+        message: "Are you sure you want to delete all games from your library? Your storage devices will be kept, but all games will be removed. This cannot be undone.",
+        confirmLabel: "Delete All Games",
+        onConfirm: async () => {
+          const btn = document.getElementById("delete-games-btn") as HTMLButtonElement | null;
+          if (btn) btn.disabled = true;
+          try {
+            const res = await fetch("/api/games/library", { method: "DELETE" });
+            if (!res.ok) {
+              const d = await res.json().catch(() => ({}));
+              throw new Error(d.detail ?? "Failed to delete games");
+            }
+            (window as any).showToast?.("All games removed from library");
+          } catch (e: any) {
+            (window as any).showToast?.(e.message || "Failed to delete games", "error");
+          } finally {
+            if (btn) btn.disabled = false;
+          }
+        },
+      });
+    });
+
+    // Delete all storage
+    document.getElementById("delete-storage-btn")?.addEventListener("click", () => {
+      (window as any).showConfirmDialog?.({
+        title: "Delete all storage",
+        message: "Are you sure you want to delete all storage devices? All storage devices and all games on them will be permanently deleted. This cannot be undone.",
+        confirmLabel: "Delete All Storage",
+        onConfirm: async () => {
+          const btn = document.getElementById("delete-storage-btn") as HTMLButtonElement | null;
+          if (btn) btn.disabled = true;
+          try {
+            const res = await fetch("/api/storage", { method: "DELETE" });
+            if (!res.ok) {
+              const d = await res.json().catch(() => ({}));
+              throw new Error(d.detail ?? "Failed to delete storage");
+            }
+            (window as any).showToast?.("All storage devices deleted");
+          } catch (e: any) {
+            (window as any).showToast?.(e.message || "Failed to delete storage", "error");
+          } finally {
+            if (btn) btn.disabled = false;
+          }
+        },
+      });
+    });
+
+    // Delete account
+    document.getElementById("delete-account-btn")?.addEventListener("click", () => {
+      (window as any).showConfirmDialog?.({
+        title: "Delete Account",
+        message: "Are you absolutely sure you want to delete your account? All your storage devices, library games, and account data will be permanently deleted. This cannot be undone.",
+        confirmLabel: "Permanently Delete Account",
+        onConfirm: async () => {
+          const btn = document.getElementById("delete-account-btn") as HTMLButtonElement | null;
+          if (btn) btn.disabled = true;
+          try {
+            const res = await fetch("/api/auth/me", { method: "DELETE" });
+            if (!res.ok) {
+              const d = await res.json().catch(() => ({}));
+              throw new Error(d.detail ?? "Failed to delete account");
+            }
+            window.location.href = "/register";
+          } catch (e: any) {
+            (window as any).showToast?.(e.message || "Failed to delete account", "error");
+            if (btn) btn.disabled = false;
+          }
+        },
+      });
+    });
   </script>
 </Layout>
