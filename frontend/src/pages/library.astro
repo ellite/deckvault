@@ -1,6 +1,6 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import LibraryPage from "../components/LibraryPage.svelte";
+import LibraryPage from "../components/LibraryPage.astro";
 import { apiJson } from "../lib/api";
 
 const cookies = Astro.request.headers.get("cookie") ?? "";
@@ -19,5 +19,5 @@ try {
 ---
 
 <Layout title="Library" showNav={true} user={user} activePage="library">
-  <LibraryPage client:load entries={entries} />
+  <LibraryPage entries={entries} />
 </Layout>

@@ -132,11 +132,6 @@ try {
         </section>
       )}
 
-      <!-- Danger -->
-      <section class="card p-6">
-        <h2 class="font-bold text-lg mb-4">Session</h2>
-        <button id="logout-btn" class="btn-danger">Sign Out</button>
-      </section>
   </main>
 
   <script>
@@ -228,10 +223,5 @@ try {
       } catch {}
     });
 
-    // Logout
-    document.getElementById("logout-btn")?.addEventListener("click", async () => {
-      await fetch("/api/auth/logout", { method: "POST" });
-      window.location.href = "/login";
-    });
   </script>
 </Layout>

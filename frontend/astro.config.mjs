@@ -9,4 +9,10 @@ export default defineConfig({
   integrations: [svelte(), tailwind({ applyBaseStyles: false })],
   server: { port: 4367, host: "0.0.0.0" },
   security: { checkOrigin: false },
+  vite: {
+    resolve: { dedupe: ["svelte"] },
+    optimizeDeps: {
+      exclude: ["svelte", "@astrojs/svelte"],
+    },
+  },
 });
