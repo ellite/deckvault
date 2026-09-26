@@ -103,3 +103,15 @@
     @apply bg-primary/10 dark:bg-primary/15 text-primary dark:text-primary-light;
   }
 }
+
+/* Chrome on Android can calculate 100dvh too tall when an installed PWA is
+   first opened or refreshed. Use the stable viewport in standalone mode so
+   short pages do not gain a browser-bar-sized overflow. This still permits
+   normal document scrolling and pull-to-refresh.
+   Kept outside @layer so it compiles after (and wins over) the .min-h-dvh
+   utility itself, which @layer base would not do. */
+@media (display-mode: standalone) {
+  .min-h-dvh {
+    min-height: 100svh;
+  }
+}

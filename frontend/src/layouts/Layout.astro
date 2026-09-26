@@ -18,7 +18,7 @@ const { title = "DeckVault", fullPage = false, showNav = false, user, activePage
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#f0f9f8" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0a1628" media="(prefers-color-scheme: dark)" />
     <meta name="description" content="Track your Steam Deck games across all storage mediums" />
@@ -28,6 +28,8 @@ const { title = "DeckVault", fullPage = false, showNav = false, user, activePage
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="DeckVault" />
+    <meta name="format-detection" content="telephone=no" />
     <title>{title} | DeckVault</title>
 
     <script is:inline>
@@ -41,7 +43,7 @@ const { title = "DeckVault", fullPage = false, showNav = false, user, activePage
   </head>
 
   <body class={[
-    fullPage ? "min-h-screen flex items-center justify-center" : "min-h-screen",
+    fullPage ? "min-h-dvh flex items-center justify-center" : "min-h-dvh",
     showNav ? "pt-14 pb-16 md:pb-0" : "",
   ].join(" ")}>
     {showNav && <NavBar user={user} activePage={activePage} />}
